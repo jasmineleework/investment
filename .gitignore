@@ -10,3 +10,10 @@ history_context/
 
 # Claude
 .claude/
+
+# Research output (local only, not tracked)
+Research/
+
+# Node
+node_modules/
+package-lock.json
