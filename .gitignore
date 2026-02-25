@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# History context (local reference only)
+history_context/
+
+# Claude
+.claude/
