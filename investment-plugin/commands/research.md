@@ -1,5 +1,5 @@
 ---
-description: 生成机构级深度研究备忘录（21章节 + 估值 + 评级）
+description: Generate institutional-grade deep research memo (21 sections + valuation + rating)
 argument-hint: "<ticker> [cn/en]"
 ---
 

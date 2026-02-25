@@ -1,5 +1,5 @@
 ---
-description: 快速估值初筛（5分钟），决定是否值得深研
+description: Quick valuation screen (~5 min) to decide if full research is warranted
 argument-hint: "<ticker>"
 ---
 
@@ -78,7 +78,7 @@ Rate 1-5 stars based on quick scan:
 ## Key Positives (2-3 points)
 ## Key Risks (2-3 points)
 
-## Verdict: [值得深研 / 暂不关注 / 等待回调]
+## Verdict: [Worth Deep Research / Pass / Wait for Pullback]
 [1-2 sentence reasoning]
 ```
 

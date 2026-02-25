@@ -177,7 +177,7 @@ Note: Multiply by 20 to convert 0-5 scale to 0-100.
 
 ## Decision Thresholds
 
-Read thresholds from `references/thresholds.md`:
+Read thresholds from `references/markets/{market}.md`:
 - Quality Score ≥ {QUALITY_PASS} → eligible for Buy (subject to other gates)
 - Quality Score < {QUALITY_SELL} → Sell
 - Between {QUALITY_SELL} and {QUALITY_PASS} → Hold or Await Entry

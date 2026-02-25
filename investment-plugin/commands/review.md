@@ -1,5 +1,5 @@
 ---
-description: 重新审视已研究标的，生成新研报并与旧版对比
+description: Re-evaluate a previously researched stock with a fresh memo and change-comparison diff
 argument-hint: "<ticker>"
 ---
 

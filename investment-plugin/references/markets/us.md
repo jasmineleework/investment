@@ -1,38 +1,89 @@
-# 美股市场配置
+# US Market Configuration
 
-## 市场参数
+All market-specific parameters for US-listed equities. Other skills read this file via `references/markets/{market}.md`. When adding a new market, copy this structure and adjust values.
 
-| 参数 | 值 |
-|------|-----|
+---
+
+## Market Parameters
+
+| Parameter | Value |
+|-----------|-------|
 | market | US |
-| 交易所 | NYSE / NASDAQ / AMEX |
-| Ticker 格式 | AAPL, MSFT, NVDA（纯字母，无后缀） |
-| 货币 | USD |
-| 会计准则 | US GAAP |
-| 基准指数 | S&P 500 |
+| exchanges | NYSE / NASDAQ / AMEX |
+| ticker_format | Plain alpha (e.g., AAPL, MSFT, NVDA) — no suffix |
+| currency | USD |
+| accounting_standard | US GAAP |
 
-## 监管披露源
+---
 
-| 来源 | URL | 用途 |
-|------|-----|------|
+## Decision Thresholds
+
+These thresholds are shared by all skills for US equities. Modify here to adjust globally.
+
+| Parameter | Variable | Default | Description |
+|-----------|----------|---------|-------------|
+| Horizon | {HORIZON} | 24 months | Expected holding period |
+| Benchmark | {benchmark} | S&P 500 | Performance comparison index |
+| Alpha target | {ALPHA_BPS} | +300 bps | Excess return target |
+| Hurdle total return | {HURDLE_TR_%} | 30% | Minimum 24-month total return |
+| Margin of safety | {MOS_%} | 25% | Required discount to fair value |
+| Skew ratio | {SKEW_X} | 1.7× | Minimum E[TR] / |Bear drawdown| |
+| Quality pass | {QUALITY_PASS} | 70 | Minimum quality score for Buy |
+| Quality sell | {QUALITY_SELL} | 60 | Quality score triggering Sell |
+
+---
+
+## Rating Definitions
+
+| Rating | Condition | Action |
+|--------|-----------|--------|
+| **Buy** | All 4 gates pass + Quality ≥ {QUALITY_PASS} | Initiate or add position |
+| **Hold** | Already held, price is fair | Maintain current position |
+| **Await Entry** | Quality strong but price too high | Wait for better entry |
+| **Sell** | Quality < {QUALITY_SELL} or fundamentals deteriorating | Reduce or exit position |
+
+---
+
+## 4 Entry Gates
+
+1. **Expected Return Gate**: E[TR] ≥ {HURDLE_TR_%}
+2. **Margin of Safety Gate**: Current price ≤ Fair Value × (1 − {MOS_%})
+3. **Skew Gate**: E[TR] ÷ |Bear Drawdown| ≥ {SKEW_X}
+4. **"Why Now" Gate**: Dated catalyst exists within {HORIZON}
+
+Any gate failure → rating cannot be Buy.
+
+---
+
+## Regulatory & Filing Sources
+
+| Source | URL | Use |
+|--------|-----|-----|
 | SEC EDGAR | https://efts.sec.gov/LATEST/search-index?q={ticker} | 10-K, 10-Q, 8-K, DEF 14A |
-| SEC Full-Text Search API | https://efts.sec.gov/LATEST/search-index?q=%22{company_name}%22 | 全文检索 |
+| SEC Full-Text Search | https://efts.sec.gov/LATEST/search-index?q=%22{company_name}%22 | Full-text search |
 
-## 宏观数据源
+---
 
-| 来源 | URL | 关键指标 |
-|------|-----|----------|
+## Macro Data Sources
+
+| Source | URL | Key Indicators |
+|--------|-----|----------------|
 | FRED | https://api.stlouisfed.org/fred/series/observations | Fed Funds Rate, CPI, GDP, Unemployment |
 
-## 市场特有风险项
+---
 
-在 §18 Risk Inventory 中需额外评估：
-- 联邦利率政策对估值的影响
-- SEC 监管变化（如 AI 监管、ESG 披露要求）
-- 中美关系对供应链的影响（如适用）
+## Market-Specific Risks
 
-## Ticker 验证规则
+In §18 Risk Inventory, additionally evaluate:
 
-- 必须为 NYSE / NASDAQ / AMEX 上市
-- 拒绝 OTC、仅外国上市、已退市的标的
-- 用 WebSearch 验证："{ticker} stock NYSE OR NASDAQ"
+- Federal interest rate policy impact on valuations
+- SEC regulatory changes (e.g., AI regulation, ESG disclosure requirements)
+- US-China supply chain exposure (if applicable)
+
+---
+
+## Ticker Validation Rules
+
+- Must be listed on NYSE / NASDAQ / AMEX
+- Reject OTC, foreign-only, or delisted tickers
+- Verify via WebSearch: `"{ticker} stock NYSE OR NASDAQ"`

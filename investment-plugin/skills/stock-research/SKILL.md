@@ -78,7 +78,7 @@ Parse user input to identify the target stock:
 
 ### 3b. Load Parameters
 
-Read `references/thresholds.md` and `references/markets/us.md` to set:
+Read `references/markets/us.md` (contains both market config and decision thresholds) to set:
 
 | Variable | Value |
 |----------|-------|
@@ -203,8 +203,7 @@ Where:
 
 ```
 stock-research (this skill)
-├── references/thresholds.md        ← all threshold values
-├── references/markets/{market}.md  ← market-specific config
+├── references/markets/{market}.md  ← market config + decision thresholds
 ├── references/investment_memo.md   ← section writing requirements only
 ├── skills/data-fetch/              ← data collection + coverage validation
 ├── skills/valuation/               ← DCF + comps + reverse DCF

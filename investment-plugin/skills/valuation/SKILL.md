@@ -16,7 +16,7 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 - Financial data from data-fetch (quote, financials, cash flow)
 - Peer list from §5 Competitive Landscape analysis
 - Market config from `references/markets/{market}.md`
-- Thresholds from `references/thresholds.md`
+- Thresholds from `references/markets/{market}.md`
 
 ## Output
 
@@ -188,7 +188,7 @@ Find growth rate g such that:
 
 ### Buy/Trim Zones
 
-Read {MOS_%} from `references/thresholds.md`:
+Read {MOS_%} from `references/markets/{market}.md`:
 
 ```
 Buy Zone  = [Fair Value Mid × (1 - {MOS_%} - 10%), Fair Value Mid × (1 - {MOS_%})]

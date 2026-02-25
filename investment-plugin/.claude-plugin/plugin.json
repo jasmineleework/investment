@@ -1,7 +1,7 @@
 {
   "name": "investment",
   "version": "0.1.0",
-  "description": "个人投资管理插件 — 机构级美股深度研究与投资决策支持",
+  "description": "Personal investment management plugin — institutional-grade US equity deep research and investment decision support",
   "author": {
     "name": "Jasmine"
   },

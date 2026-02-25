@@ -2,7 +2,7 @@
 
 This template defines the **writing requirements** for each section of the investment memorandum. It does NOT define thresholds, scoring logic, coverage standards, or decision rules — those live in their respective skills and config files:
 
-- Thresholds → `references/thresholds.md`
+- Thresholds → `references/markets/{market}.md` (market-specific)
 - Data collection & coverage validation → `skills/data-fetch/SKILL.md`
 - Quality scoring → `skills/quality-scorecard/SKILL.md`
 - Valuation → `skills/valuation/SKILL.md`
