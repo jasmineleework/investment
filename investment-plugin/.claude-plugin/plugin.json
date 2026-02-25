@@ -1,0 +1,9 @@
+{
+  "name": "investment",
+  "version": "0.1.0",
+  "description": "个人投资管理插件 — 机构级美股深度研究与投资决策支持",
+  "author": {
+    "name": "Jasmine"
+  },
+  "dependencies": []
+}

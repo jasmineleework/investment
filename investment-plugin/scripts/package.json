@@ -1,0 +1,18 @@
+{
+  "name": "investment-plugin-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fetch": "tsx yahoo-fetch.ts",
+    "dcf": "tsx calc-dcf.ts",
+    "wacc": "tsx calc-wacc.ts"
+  },
+  "dependencies": {
+    "yahoo-finance2": "^2.14.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
