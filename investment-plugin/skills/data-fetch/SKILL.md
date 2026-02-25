@@ -2,59 +2,77 @@
 name: data-fetch
 description: >
   Financial data collection for investment research.
-  Fetches market data via Yahoo Finance API, searches web sources,
-  and retrieves SEC filings. Outputs structured data for use by
-  other skills (stock-research, valuation, quality-scorecard).
+  Collects market data via WebSearch (primary) and optional Yahoo Finance
+  script (accelerator), searches web sources, and retrieves SEC filings.
+  Outputs structured data for use by other skills.
 ---
 
 # Data Fetch
 
-Collect and validate financial data for a given stock ticker. This skill is called by `stock-research` and should not be invoked directly by the user.
+Collect and validate financial data for a given stock ticker. This skill is called by `stock-research` or `quick-check` and should not be invoked directly by the user.
 
 ## Inputs
 
 - `{ticker}` — Stock ticker symbol (e.g., AAPL)
 - `{market}` — Market identifier (default: US)
+- `{mode}` — `"full"` (default, for /research) or `"quick"` (for /quick-check)
 
 ## Outputs
 
-1. **Structured financial data** (from Yahoo Finance API)
-2. **Web source list** (from WebSearch, target 60+ unique sources)
-3. **Coverage Log** for validation
+1. **Structured financial data** (from WebSearch + optional script)
+2. **Web source list** (from WebSearch; full mode targets 60+ unique sources)
+3. **Coverage Log** for validation (full mode only)
 
 ---
 
-## Step 1: Yahoo Finance Data
+## Step 1: Core Financial Data
 
-Execute the Yahoo Finance fetch script:
+### Primary Path — WebSearch (always runs)
+
+Run these queries to collect key financial metrics:
+
+```
+WebSearch: "{ticker} stock price market cap PE EV/EBITDA revenue growth {current_year}"
+WebSearch: "{ticker} earnings revenue gross margin operating margin FCF"
+WebSearch: "{ticker} balance sheet debt cash shares outstanding"
+WebSearch: "{ticker} analyst target price consensus rating"
+WebSearch: "{ticker} 52 week high low stock performance"
+```
+
+Extract and organize into a structured summary:
+
+| Data Category | Fields |
+|---------------|--------|
+| **Quote** | price, marketCap, PE (TTM + forward), PB, EV/EBITDA, EV/Revenue, dividendYield, 52wHigh/Low |
+| **Financials** | revenue, grossProfit, grossMargin, operatingMargin, profitMargin, netIncome, EPS, revenue growth |
+| **Balance Sheet** | totalAssets, totalDebt, cash, shareholdersEquity, debtToEquity, currentRatio |
+| **Cash Flow** | operatingCF, capex, FCF, SBC |
+| **Analyst** | consensus rating, target price (mean/high/low), number of analysts |
+
+### Optional Accelerator — Yahoo Finance Script
+
+If Bash tool is available AND the script environment is set up:
 
 ```
 Bash: cd {plugin_root}/scripts && npx tsx yahoo-fetch.ts {ticker}
 ```
 
-This returns JSON with:
+This returns structured JSON that supplements WebSearch data. **If the script fails for any reason (missing dependencies, sandbox restrictions, network errors), continue without it.** All required data can be obtained via WebSearch.
 
-| Data Category | Fields |
-|---------------|--------|
-| **Quote** | price, marketCap, PE, PB, dividendYield, 52wHigh/Low, avgVolume |
-| **Financials** | revenue, grossProfit, operatingIncome, netIncome, EPS (TTM + quarterly) |
-| **Balance Sheet** | totalAssets, totalDebt, cash, shareholdersEquity |
-| **Cash Flow** | operatingCF, capex, FCF, SBC |
-| **Historical Prices** | daily close for past 2 years |
-| **Analyst Ratings** | consensus rating, target price (mean/high/low), number of analysts |
-
-If the script fails, fall back to WebSearch queries for the same data points.
+**Important**: Do NOT block on script failure. The WebSearch path above is sufficient.
 
 ---
 
 ## Step 2: WebSearch Information Sources
 
-Execute targeted searches to build the Coverage Log. Organize queries by the 21-section structure of the investment memo.
+**If `{mode}` = "quick"**: Skip this step. The Step 1 queries plus 3-5 additional targeted queries (in quick-check command) are sufficient.
+
+**If `{mode}` = "full"**: Execute targeted searches to build the Coverage Log. Organize queries by the 21-section structure of the investment memo.
 
 ### Phase 1 — Critical Sections (3-5 queries each)
 
 **§1 Thesis Framework**
-- `"{ticker} investment thesis 2025 2026"`
+- `"{ticker} investment thesis {current_year}"`
 - `"{ticker} bull case bear case"`
 - `"{ticker} variant perception catalyst"`
 
@@ -79,7 +97,7 @@ Execute targeted searches to build the Coverage Log. Organize queries by the 21-
 
 **§21 Scenarios & Catalysts**
 - `"{ticker} upcoming catalysts earnings date"`
-- `"{ticker} risks headwinds challenges 2025 2026"`
+- `"{ticker} risks headwinds challenges {current_year}"`
 
 ### Phase 2 — Remaining Sections (1-2 queries each)
 
@@ -110,6 +128,8 @@ After initial queries, check Coverage Log diversity. If needed, add targeted que
 
 ## Step 3: SEC EDGAR (US Market)
 
+**If `{mode}` = "quick"**: Skip this step.
+
 If `{market}` = US, fetch recent SEC filings via WebFetch:
 
 ```
@@ -125,6 +145,8 @@ Extract key filings:
 
 ## Step 4: FRED Macro Data (US Market)
 
+**If `{mode}` = "quick"**: Skip this step.
+
 If `{market}` = US, fetch key macro indicators via WebFetch:
 
 ```
@@ -138,6 +160,8 @@ These provide context for §13 Capital Structure (WACC inputs) and §18 Risk (ma
 ---
 
 ## Step 5: Coverage Validation
+
+**If `{mode}` = "quick"**: Skip this step.
 
 Build the Coverage Log and check against thresholds:
 
@@ -177,9 +201,9 @@ Count unique sources by **Domain + Document Title** combination. Multiple pages 
 
 ## Output
 
-Pass the following to the calling skill (stock-research):
+Pass the following to the calling skill (stock-research or quick-check):
 
-1. **Yahoo Finance data** — structured JSON
-2. **Coverage Log** — full source table
-3. **Coverage Validator** — pass/fail for each criterion
+1. **Financial data summary** — structured metrics from WebSearch (+ script if available)
+2. **Coverage Log** — full source table (full mode) or abbreviated list (quick mode)
+3. **Coverage Validator** — pass/fail for each criterion (full mode only)
 4. **Key findings summary** — top 5-10 most important data points discovered during research, organized by section relevance
