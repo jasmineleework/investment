@@ -152,10 +152,26 @@ Build the Coverage Log and check against thresholds:
 
 ### Coverage Log Format
 
-| # | Title | Link | Date | Source Type | Domain | Section | Time-Sensitive |
-|---|-------|------|------|-------------|--------|---------|----------------|
+| # | Title | Link | Date | Source Type | Region | Domain | Section | Notes | Time-Sensitive |
+|---|-------|------|------|-------------|--------|--------|---------|-------|----------------|
 
 **Source Types**: SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
+
+### Uniqueness Calculation
+
+Count unique sources by **Domain + Document Title** combination. Multiple pages from the same article count as one source.
+
+### Time-Sensitivity Protocol
+
+- Mark each time-sensitive metric (price, earnings, guidance, macro data) as **"Yes"** in the Time-Sensitive column.
+- Print its date; update if newer data exists.
+- If retaining older data, state rationale for retention.
+
+### Validation Behavior
+
+- If any validator criterion is **"Fail"**, continue researching silently until all pass.
+- Do NOT re-prompt the user during validation — resolve gaps autonomously.
+- If 60-source threshold cannot be met after exhaustive search, acknowledge the gap in the Coverage Validator output and append a Research Methodology Note stating which criteria fell short and why.
 
 ---
 

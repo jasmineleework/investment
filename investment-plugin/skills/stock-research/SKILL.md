@@ -159,17 +159,23 @@ Purpose: Complete company-level deep analysis.
 5. **Coverage Log + Coverage Validator** — From data-fetch output
 6. **Appendix** — Models, data tables, key assumptions
 
+### Phase 5 — Output Validation
+
+**Before saving the final memo**, read and execute `skills/output-validator/SKILL.md`.
+
+The validator checks:
+1. **Structural completeness** — All required components present
+2. **Internal consistency** — Numbers match across sections (E[TR], fair value, rating logic)
+3. **Writing standards** — Language, length, tagging, date formatting
+4. **Coverage quality** — Source thresholds met or gaps acknowledged
+5. **Risk & bias review** — Bull bias detection, disconfirming evidence check
+
+**If validator returns FAIL**: Fix the flagged issues and re-run validator.
+**If validator returns PASS or PASS WITH NOTES**: Proceed to output.
+
 ---
 
 ## Step 5: Output
-
-### Style Control
-
-- Each section: 300-600 words
-- Favor tables, bullet points, and calculations over prose
-- Tag each paragraph as **(Fact)** / **(Analysis)** / **(Inference)**
-- Total memo target: 8,000-10,000 words
-- All output in `{output_language}`
 
 ### Output Sequence
 
@@ -193,22 +199,18 @@ Where:
 
 ---
 
-## Quick Reference Card
+## Skill Dependency Map
 
-| Element | Requirement |
-|---------|-------------|
-| Benchmark | {benchmark} |
-| Alpha Target | +300 bps |
-| Return Hurdle | {HURDLE_TR_%} / {HORIZON} |
-| Margin of Safety | {MOS_%} |
-| Skew Ratio | ≥ {SKEW_X} |
-| Quality Pass | ≥ {QUALITY_PASS} |
-| Quality Sell | < {QUALITY_SELL} |
-| Sources Required | ≥ 60 unique |
-| Quality Media | ≥ 10 |
-| Competitor Primary | ≥ 5 |
-| Academic/Expert | ≥ 5 |
-| Recency | ≥ 60% within 24 mo |
-| Domain Cap | ≤ 10% from any single domain |
-| Section Length | 300-600 words each |
-| Total Length | 8,000-10,000 words |
+```
+stock-research (this skill)
+├── references/thresholds.md        ← all threshold values
+├── references/markets/{market}.md  ← market-specific config
+├── references/investment_memo.md   ← section writing requirements only
+├── skills/data-fetch/              ← data collection + coverage validation
+├── skills/valuation/               ← DCF + comps + reverse DCF
+├── skills/quality-scorecard/       ← 5-dimension quality scoring
+├── skills/decision-rules/          ← 4-gate rating engine
+└── skills/output-validator/        ← pre-output quality gate
+```
+
+Each skill is the **single source of truth** for its domain. No logic is duplicated across skills or in the memo template.
