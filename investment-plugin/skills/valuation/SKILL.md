@@ -73,10 +73,10 @@ If {ticker} deserves a premium or discount to peer median, state why:
 
 ### Step 1: Calculate WACC
 
-Use the calc-wacc.ts script or calculate manually:
+Use the calc_wacc.py script or calculate manually:
 
 ```
-Bash: cd {plugin_root}/scripts && npx tsx calc-wacc.ts {ticker} --risk-free=RATE --beta=BETA --erp=ERP --debt-rate=RATE --tax-rate=RATE --debt-ratio=RATIO
+Bash: cd {skill_root}/scripts && python3 calc_wacc.py {ticker} --risk-free=RATE --beta=BETA --erp=ERP --debt-rate=RATE --tax-rate=RATE --debt-ratio=RATIO
 ```
 
 If script unavailable, calculate:
@@ -136,9 +136,9 @@ Build 2-way sensitivity on the two most impactful drivers:
 | **Growth Base** | $XX | $XX | $XX |
 | **Growth -2%** | $XX | $XX | $XX |
 
-Use the calc-dcf.ts script if available:
+Use the calc_dcf.py script if available:
 ```
-Bash: cd {plugin_root}/scripts && npx tsx calc-dcf.ts --fcf=BASE_FCF --growth=RATES --wacc=RATE --terminal-growth=RATE --net-debt=AMOUNT --shares=COUNT
+Bash: cd {skill_root}/scripts && python3 calc_dcf.py --fcf=BASE_FCF --growth=RATES --wacc=RATE --terminal-growth=RATE --net-debt=AMOUNT --shares=COUNT
 ```
 
 ---
