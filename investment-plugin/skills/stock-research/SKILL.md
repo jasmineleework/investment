@@ -99,20 +99,23 @@ Read `references/markets/us.md` (contains both market config and decision thresh
 
 ## Step 4: Execute Research
 
-### Phase 1 — Data Collection
+### Phase 1 — Data Collection & Data Contract
 
-Read and execute `skills/data-fetch/SKILL.md` with `{ticker}` and `{market}`.
+Read and execute `skills/data-fetch/SKILL.md` with `{ticker}`, `{market}`, and `{mode}` = "full".
 
 This produces:
-- Yahoo Finance structured data
-- WebSearch source list (target 60+ unique)
-- SEC EDGAR filings
-- FRED macro data
-- Coverage Log
+- **Data Contract** — `Research/{ticker}/data_contract.md` (single source of truth for all quantitative data)
+- Coverage Log (30+ unique sources)
+- Coverage Validator (pass/fail for each criterion)
+- Key qualitative findings organized by section relevance
+
+**CRITICAL**: The Data Contract is the single source of truth for ALL quantitative data in the memo. All section-writers MUST reference `Research/{ticker}/data_contract.md` for financial numbers. No section may re-derive, estimate, or override Data Contract figures.
 
 ### Phase 2 — Batch 1: Skeleton Sections
 
 Read `references/investment_memo.md` with all parameters substituted.
+
+**Before writing any section**, read `Research/{ticker}/data_contract.md` and use it as the authoritative source for all financial figures.
 
 Write the following critical sections first (300-600 words each):
 
@@ -126,6 +129,8 @@ Write the following critical sections first (300-600 words each):
 Purpose: Establish thesis, financial foundation, and valuation anchors.
 
 ### Phase 3 — Batch 2: Remaining Sections
+
+**Reminder**: All financial data must come from `Research/{ticker}/data_contract.md`.
 
 Write remaining sections (300-600 words each):
 
@@ -159,9 +164,11 @@ Purpose: Complete company-level deep analysis.
 5. **Coverage Log + Coverage Validator** — From data-fetch output
 6. **Appendix** — Models, data tables, key assumptions
 
-### Phase 5 — Output Validation
+### Phase 5 — Output Validation (MANDATORY)
 
-**Before saving the final memo**, read and execute `skills/output-validator/SKILL.md`.
+**This phase is MANDATORY — do NOT skip it regardless of context window constraints.**
+
+Before saving the final memo, read and execute `skills/output-validator/SKILL.md`.
 
 The validator checks:
 1. **Structural completeness** — All required components present
@@ -172,6 +179,7 @@ The validator checks:
 
 **If validator returns FAIL**: Fix the flagged issues and re-run validator.
 **If validator returns PASS or PASS WITH NOTES**: Proceed to output.
+**If context window is running low**: Run a minimal validation (Check 1 + Check 2 only) and append a note that full validation was not completed.
 
 ---
 
@@ -205,11 +213,15 @@ Where:
 stock-research (this skill)
 ├── references/markets/{market}.md  ← market config + decision thresholds
 ├── references/investment_memo.md   ← section writing requirements only
-├── skills/data-fetch/              ← data collection + coverage validation
+├── skills/data-fetch/              ← data collection + Data Contract + coverage validation
+│   └── Research/{ticker}/data_contract.md  ← SINGLE SOURCE OF TRUTH for all quantitative data
 ├── skills/valuation/               ← DCF + comps + reverse DCF
-├── skills/quality-scorecard/       ← 5-dimension quality scoring
+├── skills/quality-scorecard/       ← 5-dimension quality scoring (industry-adaptive)
 ├── skills/decision-rules/          ← 4-gate rating engine
-└── skills/output-validator/        ← pre-output quality gate
+└── skills/output-validator/        ← pre-output quality gate (MANDATORY)
 ```
 
-Each skill is the **single source of truth** for its domain. No logic is duplicated across skills or in the memo template.
+**Key Principles**:
+1. Each skill is the **single source of truth** for its domain. No logic is duplicated.
+2. The **Data Contract** (`data_contract.md`) is the single source of truth for quantitative data — all sections must reference it.
+3. The **Output Validator** is mandatory — the memo cannot be saved without passing validation.

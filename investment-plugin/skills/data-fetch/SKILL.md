@@ -2,9 +2,9 @@
 name: data-fetch
 description: >
   Financial data collection for investment research.
-  Collects market data via WebSearch (primary) and optional Yahoo Finance
-  script (accelerator), searches web sources, and retrieves SEC filings.
-  Outputs structured data for use by other skills.
+  Collects structured data via MCP APIs (primary), WebSearch (secondary),
+  and SEC filings. Outputs a Data Contract file consumed by all
+  downstream skills.
 ---
 
 # Data Fetch
@@ -19,191 +19,286 @@ Collect and validate financial data for a given stock ticker. This skill is call
 
 ## Outputs
 
-1. **Structured financial data** (from WebSearch + optional script)
-2. **Web source list** (from WebSearch; full mode targets 60+ unique sources)
-3. **Coverage Log** for validation (full mode only)
+1. **Data Contract** — Standardized financial metrics file (markdown table). ALL downstream sections MUST reference this file for quantitative data, not re-derive from memory.
+2. **Web source list** — Coverage Log (full mode targets 30+ unique sources)
+3. **Coverage Validator** — Pass/fail for each criterion (full mode only)
 
 ---
 
-## Step 1: Core Financial Data
+## Step 1: Structured Financial Data (MCP APIs)
 
-### Primary Path — WebSearch (always runs)
+### Priority 1 — MCP Data Providers (try in order, use first available)
 
-Run these queries to collect key financial metrics:
+Check for these MCP tools at runtime. Use the FIRST available provider:
+
+| Priority | Provider | MCP Server | Key Data |
+|----------|----------|------------|----------|
+| 1 | S&P Global / Kensho | `spglobal` | Financials, estimates, ownership, transcripts |
+| 2 | FactSet | `factset` | Market data, estimates, fundamentals |
+| 3 | Morningstar | `morningstar` | Financials, ratings, fair value |
+| 4 | LSEG | `lseg` | Market data, indices |
+| 5 | Daloopa | `daloopa` | Detailed financials, alternative data |
+
+**How to detect**: List available MCP tools. If any tool name contains the provider keyword (e.g., `spglobal`, `factset`), that provider is available.
+
+**If an MCP provider is available**, query it for:
 
 ```
-WebSearch: "{ticker} stock price market cap PE EV/EBITDA revenue growth {current_year}"
-WebSearch: "{ticker} earnings revenue gross margin operating margin FCF"
-WebSearch: "{ticker} balance sheet debt cash shares outstanding"
-WebSearch: "{ticker} analyst target price consensus rating"
-WebSearch: "{ticker} 52 week high low stock performance"
+- Company profile (name, sector, industry, exchange, market cap)
+- Income statement (3-5 years historical + consensus estimates)
+- Balance sheet (latest + 2-3 years historical)
+- Cash flow statement (3-5 years historical)
+- Key ratios (P/E, EV/EBITDA, EV/Revenue, P/B, ROE, ROIC)
+- Analyst consensus (target price, rating, EPS estimates)
+- Ownership structure (institutional, insider %)
+- Earnings transcripts (latest 1-2 quarters) — via Aiera MCP if available
 ```
 
-Extract and organize into a structured summary:
+**Output from MCP**: Structured data that feeds directly into the Data Contract.
 
-| Data Category | Fields |
-|---------------|--------|
-| **Quote** | price, marketCap, PE (TTM + forward), PB, EV/EBITDA, EV/Revenue, dividendYield, 52wHigh/Low |
-| **Financials** | revenue, grossProfit, grossMargin, operatingMargin, profitMargin, netIncome, EPS, revenue growth |
-| **Balance Sheet** | totalAssets, totalDebt, cash, shareholdersEquity, debtToEquity, currentRatio |
-| **Cash Flow** | operatingCF, capex, FCF, SBC |
-| **Analyst** | consensus rating, target price (mean/high/low), number of analysts |
+### Priority 2 — WebSearch (always runs, supplements MCP)
 
-### Optional Accelerator — Yahoo Finance Script
+Run these queries regardless of MCP availability:
 
-If Bash tool is available AND the script environment is set up:
+```
+WebSearch: "{ticker} latest earnings results revenue EPS {current_quarter} {current_year}"
+WebSearch: "{ticker} analyst consensus target price rating {current_year}"
+WebSearch: "{ticker} market cap PE ratio EV/EBITDA valuation"
+WebSearch: "{ticker} balance sheet debt cash {current_year}"
+WebSearch: "{ticker} 52 week high low performance YTD"
+```
+
+**Purpose**: Cross-validate MCP data, fill gaps, and capture qualitative context (narrative, market sentiment) that APIs don't provide.
+
+### Priority 3 — Yahoo Finance Script (optional fallback)
+
+If Bash tool is available AND no MCP provider was found:
 
 ```
 Bash: cd {plugin_root}/scripts && npx tsx yahoo-fetch.ts {ticker}
 ```
 
-This returns structured JSON that supplements WebSearch data. **If the script fails for any reason (missing dependencies, sandbox restrictions, network errors), continue without it.** All required data can be obtained via WebSearch.
-
-**Important**: Do NOT block on script failure. The WebSearch path above is sufficient.
+**Do NOT block on script failure.** This is purely an optional accelerator.
 
 ---
 
-## Step 2: WebSearch Information Sources
+## Step 2: Build Data Contract
 
-**If `{mode}` = "quick"**: Skip this step. The Step 1 queries plus 3-5 additional targeted queries (in quick-check command) are sufficient.
+After Step 1, assemble the **Data Contract** — a single standardized file that ALL downstream skills and section-writers MUST reference. This is the single source of truth for quantitative data.
 
-**If `{mode}` = "full"**: Execute targeted searches to build the Coverage Log. Organize queries by the 21-section structure of the investment memo.
+Save to: `Research/{ticker}/data_contract.md`
 
-### Phase 1 — Critical Sections (3-5 queries each)
+### Data Contract Format
 
-**§1 Thesis Framework**
-- `"{ticker} investment thesis {current_year}"`
-- `"{ticker} bull case bear case"`
-- `"{ticker} variant perception catalyst"`
+```markdown
+# Data Contract — {ticker}
+Generated: {date}
+Sources: {list of data sources used: MCP provider name, WebSearch, script}
 
-**§2 Market Structure & Size**
-- `"{ticker} TAM SAM market size"`
-- `"{ticker} industry growth rate outlook"`
-- `"{ticker} market share penetration"`
+## Company Profile
+| Field | Value |
+|-------|-------|
+| Company Name | {name} |
+| Ticker | {ticker} |
+| Exchange | {exchange} |
+| Sector / Industry | {sector} / {industry} |
+| Market Cap | ${X}B |
+| Enterprise Value | ${X}B |
+| Current Price | ${X} (as of {date}) |
+| 52-Week Range | ${low} - ${high} |
+| Shares Outstanding | {X}M (basic) / {X}M (diluted) |
+| Beta | {X} |
 
-**§12 Financial Condition**
-- `"{ticker} earnings revenue growth margin"`
-- `"{ticker} Rule of 40 FCF margin"`
-- `"{ticker} billings RPO backlog"`
+## Income Statement Summary
+| Metric | FY-3A | FY-2A | FY-1A | FYE | FY+1E |
+|--------|-------|-------|-------|-----|-------|
+| Revenue ($M) | | | | | |
+| Revenue Growth % | | | | | |
+| Gross Profit ($M) | | | | | |
+| Gross Margin % | | | | | |
+| EBITDA ($M) | | | | | |
+| EBITDA Margin % | | | | | |
+| Operating Income ($M) | | | | | |
+| Operating Margin % | | | | | |
+| Net Income ($M) | | | | | |
+| Net Margin % | | | | | |
+| EPS (diluted) | | | | | |
+| SBC ($M) | | | | | |
+| SBC % of Revenue | | | | | |
 
-**§13 Capital Structure**
-- `"{ticker} debt maturity leverage ratio"`
-- `"{ticker} capital allocation buyback dividend"`
+## Balance Sheet Summary
+| Metric | Latest |
+|--------|--------|
+| Total Assets ($M) | |
+| Cash & Equivalents ($M) | |
+| Total Debt ($M) | |
+| Net Debt ($M) | |
+| Shareholders' Equity ($M) | |
+| Debt/Equity | |
+| Net Debt/EBITDA | |
+| Current Ratio | |
+| Interest Coverage | |
 
-**§20 Valuation Framework**
-- `"{ticker} valuation EV/Revenue EV/EBITDA PE"`
-- `"{ticker} DCF fair value target price"`
-- `"{ticker} peer comparison comps"`
+## Cash Flow Summary
+| Metric | FY-2A | FY-1A | FYE | FY+1E |
+|--------|-------|-------|-----|-------|
+| Operating Cash Flow ($M) | | | | |
+| Capital Expenditures ($M) | | | | |
+| Free Cash Flow ($M) | | | | |
+| FCF Margin % | | | | |
+| Dividends ($M) | | | | |
+| Buybacks ($M) | | | | |
 
-**§21 Scenarios & Catalysts**
-- `"{ticker} upcoming catalysts earnings date"`
-- `"{ticker} risks headwinds challenges {current_year}"`
+## Valuation Multiples
+| Metric | Current | vs 5Y Avg | vs Peers |
+|--------|---------|-----------|----------|
+| P/E (TTM) | | | |
+| P/E (FWD) | | | |
+| EV/Revenue (TTM) | | | |
+| EV/Revenue (FWD) | | | |
+| EV/EBITDA (TTM) | | | |
+| EV/EBITDA (FWD) | | | |
+| P/B | | | |
+| FCF Yield | | | |
 
-### Phase 2 — Remaining Sections (1-2 queries each)
+## Analyst Consensus
+| Field | Value |
+|-------|-------|
+| Rating | {Buy/Hold/Sell} |
+| # of Analysts | |
+| Target Price (Mean) | $ |
+| Target Price (High) | $ |
+| Target Price (Low) | $ |
+| EPS Estimate (Current FY) | $ |
+| EPS Estimate (Next FY) | $ |
+| Revenue Estimate (Current FY) | $M |
 
-**§3 Customer**: `"{ticker} customer segments enterprise SMB"`
-**§4 Product**: `"{ticker} product roadmap new features"`
-**§5 Competition**: `"{ticker} vs competitors market share"`
-**§6 Ecosystem**: `"{ticker} platform ecosystem developers API"`
-**§7 GTM**: `"{ticker} go-to-market sales strategy channel"`
-**§8 Retention**: `"{ticker} net dollar retention churn NRR"`
-**§9 Monetization**: `"{ticker} revenue model pricing subscription"`
-**§10 Pricing**: `"{ticker} pricing power elasticity ARPU"`
-**§11 Unit Economics**: `"{ticker} CAC LTV payback period"`
-**§14 Moat**: `"{ticker} competitive moat switching costs"`
-**§15 Data & AI**: `"{ticker} AI strategy data advantage"`
-**§16 Execution**: `"{ticker} management team leadership CEO"`
-**§17 Supply Chain**: `"{ticker} supply chain operations risk"`
-**§18 Risk**: `"{ticker} risk factors 10-K SEC filing"`
-**§19 M&A**: `"{ticker} acquisitions M&A strategy"`
+## WACC Inputs
+| Parameter | Value | Source |
+|-----------|-------|--------|
+| Risk-Free Rate | % | 10Y UST |
+| Beta | | {source} |
+| Equity Risk Premium | % | |
+| Cost of Equity | % | CAPM |
+| Cost of Debt (pre-tax) | % | |
+| Tax Rate | % | |
+| Debt Weight | % | |
+| Equity Weight | % | |
+| WACC | % | calculated |
 
-### Phase 3 — Source Diversification
+## Data Quality Notes
+- [List any fields that could not be populated]
+- [List any conflicting data points and which source was chosen]
+- [Flag stale data (>6 months old)]
+```
 
-After initial queries, check Coverage Log diversity. If needed, add targeted queries:
-- Competitor primary sources: `"{competitor_name} vs {ticker}"`
-- Academic/expert: `"{ticker} industry expert analysis academic paper"`
-- Quality media: `"{ticker} Bloomberg OR WSJ OR FT OR Reuters analysis"`
+### Data Contract Rules
+
+1. **Every numeric field must cite its source** (MCP provider, specific WebSearch result, or SEC filing).
+2. **If MCP and WebSearch give different numbers**, prefer MCP data (structured API) and note the discrepancy.
+3. **Leave fields blank rather than guessing** — blank fields signal to downstream writers that data is unavailable.
+4. **The Data Contract is immutable during a single research run** — once generated, all sections reference it; no section may override these numbers.
 
 ---
 
-## Step 3: SEC EDGAR (US Market)
+## Step 3: Qualitative Research (WebSearch)
 
-**If `{mode}` = "quick"**: Skip this step.
+**If `{mode}` = "quick"**: Skip this step. The Step 1/2 queries are sufficient.
 
-If `{market}` = US, fetch recent SEC filings via WebFetch:
+**If `{mode}` = "full"**: Execute targeted searches to build qualitative context for all 21 sections.
 
+### Research Queries by Section Group
+
+**Group A — Strategy & Market (§1, §2, §5, §14)** — 6-8 queries
 ```
-WebFetch: https://efts.sec.gov/LATEST/search-index?q="{ticker}"&dateRange=custom&startdt=2024-01-01&enddt=2026-12-31&forms=10-K,10-Q,8-K
+"{ticker} investment thesis bull bear case {current_year}"
+"{ticker} TAM SAM addressable market size"
+"{ticker} market share competitive position"
+"{ticker} vs {competitor_1} vs {competitor_2}"
+"{ticker} competitive moat switching costs barriers"
+"{ticker} industry outlook growth drivers"
 ```
 
-Extract key filings:
-- Most recent 10-K (annual report)
-- Most recent 10-Q (quarterly report)
-- Recent 8-K filings (material events)
+**Group B — Business Model (§3, §4, §7, §8, §9, §10)** — 4-6 queries
+```
+"{ticker} customer segments enterprise revenue breakdown"
+"{ticker} product roadmap technology platform"
+"{ticker} pricing strategy revenue model"
+"{ticker} customer retention churn expansion"
+```
+
+**Group C — Operations & Risk (§6, §11, §16, §17, §18, §19)** — 4-6 queries
+```
+"{ticker} management CEO leadership execution"
+"{ticker} supply chain operations manufacturing"
+"{ticker} risk factors challenges headwinds"
+"{ticker} M&A acquisitions strategy"
+```
+
+**Group D — AI & Data (§15)** — 1-2 queries
+```
+"{ticker} AI artificial intelligence strategy data"
+```
+
+**Group E — Valuation & Catalysts (§20, §21)** — 3-4 queries
+```
+"{ticker} valuation DCF fair value intrinsic"
+"{ticker} peer comparison valuation multiples"
+"{ticker} upcoming catalysts earnings date events"
+```
+
+**Total**: 18-26 targeted queries for full mode.
 
 ---
 
-## Step 4: FRED Macro Data (US Market)
+## Step 4: SEC EDGAR (US Market, full mode only)
 
-**If `{mode}` = "quick"**: Skip this step.
+**If `{mode}` = "quick"**: Skip.
 
-If `{market}` = US, fetch key macro indicators via WebFetch:
+If `{market}` = US, search for recent SEC filings:
 
 ```
-WebFetch: https://fred.stlouisfed.org/series/FEDFUNDS  (Fed Funds Rate)
-WebFetch: https://fred.stlouisfed.org/series/CPIAUCSL  (CPI)
-WebFetch: https://fred.stlouisfed.org/series/GDP        (GDP)
+WebSearch: "site:sec.gov {ticker} 10-K 10-Q {current_year}"
 ```
 
-These provide context for §13 Capital Structure (WACC inputs) and §18 Risk (macro risks).
+Note key filing dates and extract risk factors, segment disclosures, and accounting policies not available via MCP/WebSearch.
 
 ---
 
-## Step 5: Coverage Validation
+## Step 5: Coverage Validation (full mode only)
 
-**If `{mode}` = "quick"**: Skip this step.
+**If `{mode}` = "quick"**: Skip.
 
 Build the Coverage Log and check against thresholds:
 
 | Criterion | Threshold | Action if Fail |
 |-----------|-----------|----------------|
-| Unique sources | ≥ 60 | Continue searching until met or acknowledge gap |
-| Quality media sources | ≥ 10 | Add Bloomberg/WSJ/FT/Reuters targeted queries |
-| Competitor primary sources | ≥ 5 | Search competitor names directly |
-| Academic/expert sources | ≥ 5 | Search academic databases, expert commentary |
-| Sources dated within 24 months | ≥ 60% | Prioritize recent sources in queries |
-| Sources from any single domain | ≤ 10% | Diversify search domains |
-
-### Coverage Log Format
-
-| # | Title | Link | Date | Source Type | Region | Domain | Section | Notes | Time-Sensitive |
-|---|-------|------|------|-------------|--------|--------|---------|-------|----------------|
+| Unique sources | ≥ 30 | Continue searching until met or acknowledge gap |
+| Source types covered | ≥ 4 of 6 types | Add targeted queries for missing types |
+| MCP data populated | ≥ 80% of Data Contract fields | Note gaps in Data Quality Notes |
+| Sources dated within 12 months | ≥ 50% | Prioritize recent sources |
 
 **Source Types**: SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
 
-### Uniqueness Calculation
+### Coverage Log Format
 
-Count unique sources by **Domain + Document Title** combination. Multiple pages from the same article count as one source.
-
-### Time-Sensitivity Protocol
-
-- Mark each time-sensitive metric (price, earnings, guidance, macro data) as **"Yes"** in the Time-Sensitive column.
-- Print its date; update if newer data exists.
-- If retaining older data, state rationale for retention.
+| # | Title | Date | Source Type | Section(s) |
+|---|-------|------|-------------|------------|
+| 1 | ... | ... | ... | §X, §Y |
 
 ### Validation Behavior
 
-- If any validator criterion is **"Fail"**, continue researching silently until all pass.
-- Do NOT re-prompt the user during validation — resolve gaps autonomously.
-- If 60-source threshold cannot be met after exhaustive search, acknowledge the gap in the Coverage Validator output and append a Research Methodology Note stating which criteria fell short and why.
+- If any criterion fails, continue researching silently until it passes or exhaustive search is complete.
+- If thresholds cannot be met, acknowledge gaps in the Coverage Validator output.
+- Do NOT re-prompt the user.
 
 ---
 
 ## Output
 
-Pass the following to the calling skill (stock-research or quick-check):
+Pass the following to the calling skill:
 
-1. **Financial data summary** — structured metrics from WebSearch (+ script if available)
-2. **Coverage Log** — full source table (full mode) or abbreviated list (quick mode)
+1. **Data Contract file** — saved to `Research/{ticker}/data_contract.md`
+2. **Coverage Log** — source table (full mode) or abbreviated list (quick mode)
 3. **Coverage Validator** — pass/fail for each criterion (full mode only)
-4. **Key findings summary** — top 5-10 most important data points discovered during research, organized by section relevance
+4. **Key qualitative findings** — top 5-10 insights from WebSearch, organized by section relevance

@@ -37,6 +37,9 @@ Your task is to produce a decision-ready, source-backed investment memorandum on
 - Concise, structured, neutral tone.
 - Each section: **300-600 words**. Favor tables, bullet points, and calculations over lengthy prose.
 - Total memo target: **8,000-10,000 words**.
+- **Section numbering**: Use "Section 1" or "§1" format. Never use "段落X.Y" or "Section X.Y paragraph" style references.
+- **Comparison tables**: Each section SHOULD include at least one table where applicable (peer comparison, historical trend, metric summary). Tables increase information density and readability.
+- **Data source**: All financial figures must come from the Data Contract (`Research/{ticker}/data_contract.md`). Do not re-derive or estimate numbers independently.
 
 ### Tagging & Rigor
 - Tag each paragraph as **(Fact)** / **(Analysis)** / **(Inference)**.
@@ -52,12 +55,70 @@ Your task is to produce a decision-ready, source-backed investment memorandum on
 
 ## Executive Summary Requirements
 
-The Executive Summary appears first in the output and must state:
-- Rating + Fair Value Range + Expected Total Return
-- Buy/Trim Zones + Dated Catalysts
-- What Would Change This Rating
+The Executive Summary appears first in the output and is written **last** (after all 21 sections, scorecard, and decision rules are complete).
 
-Note: The Executive Summary is written **last** (after all 21 sections, scorecard, and decision rules are complete) to ensure it reflects the full analysis.
+### Executive Summary Template
+
+```
+## Executive Summary
+
+**{stock_name} ({stock_ticker}) — {Rating}**
+**Fair Value Range**: ${low} – ${mid} – ${high} | **Current Price**: ${price} | **E[TR]**: X%
+**Quality Score**: XX/100 | **Gates Passed**: X/4
+
+### Key Metrics Snapshot
+
+| Metric | Value | vs Peers |
+|--------|-------|----------|
+| Market Cap | $XB | |
+| Revenue (FYE) | $XM | |
+| Revenue Growth | X% | |
+| EV/EBITDA (FWD) | Xx | |
+| FCF Yield | X% | |
+| Net Debt/EBITDA | Xx | |
+
+### Investment Thesis
+
+■ **[Thesis Point 1 — bold topic header].** 3-5 sentences of supporting detail with specific numbers, dates, and evidence.
+
+■ **[Thesis Point 2 — bold topic header].** 3-5 sentences of supporting detail with specific numbers, dates, and evidence.
+
+■ **[Thesis Point 3 — bold topic header].** 3-5 sentences of supporting detail with specific numbers, dates, and evidence.
+
+### Key Risks
+
+■ **[Risk 1 — bold topic header].** 2-3 sentences quantifying impact and probability.
+
+■ **[Risk 2 — bold topic header].** 2-3 sentences quantifying impact and probability.
+
+### Entry Guidance
+
+| Zone | Price Range | Action |
+|------|------------|--------|
+| Buy Zone | $X – $X | Full position |
+| Add Zone | $X – $X | Add on pullback |
+| Hold Zone | $X – $X | Maintain position |
+| Trim Zone | Above $X | Reduce |
+
+### Catalysts (Next 12 Months)
+
+| Date | Event | Expected Impact |
+|------|-------|----------------|
+| YYYY-MM-DD | [Event] | [Impact] |
+
+### What Would Change This Rating
+
+- Upgrade triggers: [specific, measurable conditions]
+- Downgrade triggers: [specific, measurable conditions]
+```
+
+### Executive Summary Rules
+
+1. Use the **■ bullet format** for thesis points and risks: `■ **Bold header.** Detail sentences.`
+2. Include the **Key Metrics Snapshot** table — pull all numbers from Data Contract.
+3. Include the **Entry Guidance** table with price zones derived from valuation.
+4. Include the **Catalysts** table with exact dates.
+5. Target length: 500-800 words.
 
 ---
 

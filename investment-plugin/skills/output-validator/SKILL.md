@@ -84,12 +84,13 @@ Review the Coverage Log and Validator from data-fetch:
 
 | Check | Threshold | Action if Fail |
 |-------|-----------|---------------|
-| Total unique sources | ≥ 60 | Append Research Methodology Note |
-| Quality media | ≥ 10 | Append note |
-| Competitor primary | ≥ 5 | Append note |
-| Academic/expert | ≥ 5 | Append note |
-| Recency | ≥ 60% within 24 months | Append note |
-| Domain diversity | ≤ 10% from any single domain | Append note |
+| Total unique sources | ≥ 30 | Append Research Methodology Note |
+| Source types covered | ≥ 4 of 6 types | Append note |
+| MCP data populated | ≥ 80% of Data Contract fields | Append note |
+| Sources within 12 months | ≥ 50% | Append note |
+| Domain diversity | ≤ 15% from any single domain | Append note |
+
+**Source Types**: SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
 
 If any criterion fails: Do NOT block output. Instead, append a **Research Methodology Note** at the end of the Coverage Validator section stating which criteria fell short and suggesting the user re-run with deeper research mode if available.
 

@@ -93,12 +93,26 @@ Evaluate competitive defensibility:
 
 ### 3. Unit Economics (20%)
 
-Evaluate profitability at the customer level:
+Evaluate profitability at the unit level. **Select the benchmark set matching the company's industry type.**
+
+#### Industry Type Detection
+
+Determine the company's primary industry type from the Data Contract (sector/industry fields):
+
+| Industry Type | Examples | Key Metrics |
+|--------------|----------|-------------|
+| **SaaS / Subscription** | CRM, ADBE, NOW | LTV/CAC, NDR, payback period |
+| **Hardware / Semiconductor** | MU, INTC, AMAT | Gross margin cycle, inventory turns, ASP trends |
+| **Consumer / Retail** | AMZN, WMT, COST | Same-store growth, inventory turns, GM trajectory |
+| **Financial Services** | JPM, V, MA | ROE, efficiency ratio, credit loss rate |
+| **Default** | (all others) | Gross margin, operating leverage, contribution margin |
+
+#### Benchmark A — SaaS / Subscription (default if LTV/CAC data is available)
 
 - **LTV/CAC ratio**: >3× good, >5× excellent
 - **Payback period**: <18mo good, <12mo excellent
 - **Net Dollar Retention**: >110% good, >130% excellent
-- **Gross margin**: >60% for software, benchmark by industry
+- **Gross margin**: >60% for software
 - **Expansion vectors**: Cross-sell, upsell, usage growth potential
 
 | Score | Benchmark |
@@ -109,6 +123,74 @@ Evaluate profitability at the customer level:
 | 2 | LTV/CAC 2-3×, payback 24-36mo, NDR 100-110% |
 | 1 | LTV/CAC <2×, long payback, NDR <100% |
 | 0 | Negative unit economics or unsustainable model |
+
+#### Benchmark B — Hardware / Semiconductor
+
+- **Gross margin** (cycle-adjusted): >40% good, >50% excellent for semis
+- **Inventory turns**: >4× good, >6× excellent
+- **ASP trend**: Rising or stable = positive; declining under cost pressure = negative
+- **Capacity utilization**: >80% good, >90% excellent (but watch over-investment)
+- **Capex efficiency**: Revenue per $ capex, improving = positive
+
+| Score | Benchmark |
+|-------|-----------|
+| 5 | Cycle-adj GM >50%, inv turns >6×, rising ASP, capex ROI improving, dominant cost curve |
+| 4 | Cycle-adj GM >45%, inv turns >5×, stable ASP, efficient capex |
+| 3 | Cycle-adj GM >40%, inv turns >4×, manageable ASP pressure |
+| 2 | Cycle-adj GM 30-40%, inv turns 3-4×, some ASP/inventory concerns |
+| 1 | GM <30% or volatile, inv turns <3×, ASP declining, capex heavy |
+| 0 | Structurally unprofitable, chronic over-inventory, cost curve disadvantage |
+
+#### Benchmark C — Consumer / Retail
+
+- **Same-store / organic growth**: >5% good, >10% excellent
+- **Inventory turns**: >8× good (grocery), >4× (general retail)
+- **Gross margin trajectory**: Expanding or stable = positive
+- **Customer acquisition efficiency**: Revenue per marketing dollar
+- **Unit economics per store/location** (if applicable)
+
+| Score | Benchmark |
+|-------|-----------|
+| 5 | SSS >10%, inv turns top-quartile, GM expanding, strong unit econ per location |
+| 4 | SSS >5%, healthy inv turns, stable GM, efficient customer acquisition |
+| 3 | SSS >3%, adequate inv management, GM in line with peers |
+| 2 | SSS 0-3%, average inv turns, GM under pressure |
+| 1 | SSS negative, inventory problems, GM declining |
+| 0 | Structural decline, negative unit economics |
+
+#### Benchmark D — Financial Services
+
+- **ROE**: >15% good, >20% excellent
+- **Efficiency ratio**: <60% good, <50% excellent (banks)
+- **Credit loss rate**: Below cycle average = positive
+- **Fee income ratio**: Higher = more durable (less rate-sensitive)
+- **Capital adequacy**: CET1 ratio well above minimums
+
+| Score | Benchmark |
+|-------|-----------|
+| 5 | ROE >20%, efficiency ratio <50%, credit losses well below avg, strong capital |
+| 4 | ROE >15%, efficiency ratio <55%, manageable credit, adequate capital |
+| 3 | ROE >12%, efficiency ratio <60%, credit in line with peers |
+| 2 | ROE 8-12%, efficiency ratio 60-65%, some credit concerns |
+| 1 | ROE <8%, efficiency ratio >65%, rising credit losses |
+| 0 | ROE negative, capital concerns, credit crisis |
+
+#### Benchmark E — Default (all other industries)
+
+- **Gross margin**: Above industry median = positive
+- **Operating leverage**: EBIT growing faster than revenue = positive
+- **Contribution margin by segment**: Identify structurally profitable vs unprofitable
+- **Working capital efficiency**: Cash conversion cycle improving
+- **Scale economics**: Unit cost declining with volume
+
+| Score | Benchmark |
+|-------|-----------|
+| 5 | GM top-quartile, strong operating leverage, all segments profitable, improving efficiency |
+| 4 | GM above median, positive operating leverage, efficient working capital |
+| 3 | GM at median, some operating leverage, adequate efficiency |
+| 2 | GM below median, limited operating leverage |
+| 1 | GM declining, no operating leverage, working capital strain |
+| 0 | Structurally unprofitable at unit level |
 
 ### 4. Execution (15%)
 
