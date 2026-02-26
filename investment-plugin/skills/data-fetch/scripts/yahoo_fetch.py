@@ -10,6 +10,7 @@ Dependencies: yfinance
 """
 
 import json
+import math
 import sys
 from datetime import datetime, timedelta
 
@@ -157,6 +158,9 @@ def _df_to_records(df) -> list:
             # Convert numpy types to Python native
             if hasattr(val, "item"):
                 val = val.item()
+            # NaN → None for valid JSON
+            if isinstance(val, float) and math.isnan(val):
+                val = None
             rec[str(col)] = val
         records.append(rec)
     return records
