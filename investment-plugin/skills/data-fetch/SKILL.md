@@ -3,7 +3,7 @@ name: data-fetch
 description: >
   Financial data collection for investment research.
   Detects runtime environment and uses the best available data sources:
-  Claude Code (direct API access) or Cowork (WebSearch only).
+  MCP tools (preferred), Python scripts (fallback), or WebSearch (last resort).
   Outputs a Data Contract file consumed by all downstream skills.
 ---
 
@@ -27,26 +27,93 @@ Collect and validate financial data for a given stock ticker. This skill is call
 
 ## Step 0: Environment Detection
 
-Detect the runtime environment to determine which data sources are available.
+Detect which data sources are available in the current runtime.
 
 ```
-Test: Run a simple Bash command to check network access
-  Bash: curl -s --max-time 5 -o /dev/null -w "%{http_code}" https://query1.finance.yahoo.com
+Check 1: Are MCP tools available?
+  Look for tools matching: get_current_stock_price, get_financials, get_income_statement
+  (These come from yfinance MCP and sec-edgar-mcp servers)
 
-  If HTTP 200 → Environment = "claude-code" (direct API access)
-  If HTTP 403 or timeout → Environment = "cowork" (sandbox restricted)
-  If Bash unavailable → Environment = "cowork"
+  If MCP tools found → Environment = "mcp" (best path)
+  If MCP tools NOT found → Check 2
+
+Check 2: Is Bash available?
+  Bash: echo "ok"
+
+  If Bash works → Environment = "claude-code" (script fallback)
+  If Bash unavailable → Environment = "cowork" (WebSearch only)
 ```
 
-**Then follow the matching path below.**
+**Route to the matching path:**
+- `"mcp"` → **Path A** (MCP-first, scripts as fallback)
+- `"claude-code"` → **Path A** (scripts as primary, skip MCP steps)
+- `"cowork"` → **Path B** (WebSearch only)
 
 ---
 
-## Path A: Claude Code Environment (direct API access)
+## Path A: Claude Code Environment (MCP-first + script fallback)
 
-### Step A1: Yahoo Finance API (PRIMARY data source)
+### Three-Tier Data Strategy
 
-Install and run the Yahoo Finance data fetcher:
+Data is fetched in priority order. Each tier fills gaps left by previous tiers.
+
+| Tier | Source | When to use |
+|------|--------|-------------|
+| Tier 1 | MCP tools | Always try first (if available) |
+| Tier 2 | Python scripts | Fill gaps MCP can't cover, or when MCP unavailable |
+| Tier 3 | WebSearch | Qualitative data + anything still missing |
+
+---
+
+### Step A1: Tier 1 — MCP Tools (preferred)
+
+**Skip this step if Environment = "claude-code" (no MCP tools).**
+
+#### A1a: Yahoo Finance MCP (price, financials, cash flow)
+
+Call these tools in parallel:
+
+| Tool | Parameters | Data it provides |
+|------|-----------|-----------------|
+| `get_current_stock_price` | `symbol: "{ticker}"` | Current price |
+| `get_income_statement` | `symbol: "{ticker}", freq: "yearly"` | Revenue, net income, EBITDA, EPS (3-4 years) |
+| `get_cashflow` | `symbol: "{ticker}", freq: "yearly"` | OCF, capex, FCF, dividends, buybacks |
+| `get_historical_stock_prices` | `symbol: "{ticker}", period: "1y", interval: "1d"` | 1-year price history (for 52-week range) |
+| `get_dividends` | `symbol: "{ticker}"` | Dividend history |
+| `get_earning_dates` | `symbol: "{ticker}", limit: 4` | Upcoming/recent earnings dates |
+| `get_news` | `symbol: "{ticker}"` | Recent news headlines |
+
+**Note**: Yahoo Finance MCP does NOT have balance sheet, quote-level fields (P/E, margins, beta), or company profile tools. These come from SEC MCP and scripts.
+
+#### A1b: SEC EDGAR MCP (financials, balance sheet, key metrics)
+
+For US stocks, call these tools in parallel:
+
+| Tool | Parameters | Data it provides |
+|------|-----------|-----------------|
+| `get_financials` | `identifier: "{ticker}", statement_type: "all"` | Income, balance sheet, cash flow from latest SEC filing |
+| `get_key_metrics` | `identifier: "{ticker}"` | Key XBRL metrics (revenue, net income, assets, debt, equity, etc.) |
+| `get_company_info` | `identifier: "{ticker}"` | Company name, CIK, SIC, exchange, fiscal year end |
+| `get_segment_data` | `identifier: "{ticker}"` | Revenue by segment/geography |
+| `get_insider_summary` | `identifier: "{ticker}", days: 180` | Insider trading activity summary |
+
+**For full mode**, also call:
+
+| Tool | Parameters | Data it provides |
+|------|-----------|-----------------|
+| `get_recent_filings` | `identifier: "{ticker}", form_type: "10-K", days: 365` | Latest 10-K filing info |
+| `compare_periods` | `identifier: "{ticker}", metric: "Revenues", start_year: {FY-3}, end_year: {FY}` | Revenue trend with CAGR |
+| `analyze_insider_sentiment` | `identifier: "{ticker}", months: 6` | Insider buy/sell pattern analysis |
+
+**SEC EDGAR is authoritative for**: balance sheet, historical financials, segment data, insider activity. Its numbers take priority over other sources when conflicts arise.
+
+---
+
+### Step A2: Tier 2 — Python Script Fallback
+
+Use scripts to fill gaps that MCP tools cannot cover. Run even if MCP succeeded — scripts provide unique data.
+
+#### A2a: Yahoo Finance script (quote-level fields MCP lacks)
 
 ```bash
 cd {skill_root}/scripts
@@ -54,53 +121,45 @@ pip install -q -r requirements.txt
 python3 yahoo_fetch.py {ticker}
 ```
 
-If the script exists and works, it will output structured JSON. Parse it into the Data Contract.
+**Purpose**: The yahoo_fetch.py script provides quote/info fields that no MCP tool covers:
+- Valuation multiples: P/E, EV/EBITDA, EV/Revenue, P/B, FCF yield
+- Margins: gross, operating, EBITDA, net
+- Risk metrics: beta, 52-week range
+- Profile: sector, industry, market cap, enterprise value, shares outstanding
+- Analyst consensus: target price, ratings, EPS estimates
 
-**If the script fails**: Note the failure in Data Quality Notes and continue with other sources.
+**If MCP provided all financials**: Still run this script for P/E, margins, beta, and analyst data.
+**If MCP was unavailable**: This script becomes the primary data source for everything.
+**If the script fails**: Note in Data Quality Notes, continue with remaining sources.
 
-**Yahoo Finance provides**:
-- Company profile (name, sector, industry, exchange, market cap)
-- Stock quote (price, 52-week range, volume, beta)
-- Income statement (3-5 years: revenue, gross profit, EBITDA, net income, EPS)
-- Balance sheet (assets, debt, cash, equity, ratios)
-- Cash flow statement (OCF, capex, FCF, dividends, buybacks)
-- Valuation multiples (P/E, EV/EBITDA, EV/Revenue, P/B, FCF yield)
-- Analyst consensus (target price, rating, EPS estimates)
-- Institutional ownership %
-
-### Step A2: SEC EDGAR API (US market, structured XBRL data)
-
-For US stocks, fetch structured financial data from SEC EDGAR:
+#### A2b: SEC EDGAR script (only if SEC MCP unavailable)
 
 ```bash
 cd {skill_root}/scripts
 python3 sec_edgar_fetch.py {ticker}
 ```
 
-The script resolves the CIK, downloads XBRL company facts to `/tmp/{ticker}_sec_facts.json`, and lists key XBRL fields in its comments.
+**Skip if SEC MCP already returned data.** Only run as fallback.
 
-**Purpose**: Cross-validate Yahoo Finance numbers with official SEC filings. SEC data is authoritative for historical financials.
-
-**If fetch fails**: Skip SEC step, rely on Yahoo Finance alone. Note in Data Quality Notes.
-
-### Step A3: FRED API (macro data for WACC)
+#### A2c: FRED script (macro data for WACC)
 
 ```bash
 cd {skill_root}/scripts
-python3 fred_fetch.py          # defaults to DGS10 (10-Year US Treasury)
-# or: python3 fred_fetch.py <SERIES_ID> [FRED_API_KEY]
+python3 fred_fetch.py
 ```
 
-The script tries the JSON API first (if API key is available), then falls back to the CSV endpoint. Compatible with both macOS and Linux.
+No MCP exists for FRED data. This script is always needed for the risk-free rate.
 
-**If the script fails**: Use WebSearch to find the latest 10Y Treasury yield:
+**If script fails**: Use WebSearch:
 ```
 WebSearch: "10 year US treasury yield today"
 ```
 
-### Step A4: WebSearch (qualitative supplement)
+---
 
-Run targeted WebSearch queries to supplement API data with qualitative context:
+### Step A3: Tier 3 — WebSearch (qualitative + gap-filling)
+
+Run targeted WebSearch queries to supplement structured data:
 
 ```
 WebSearch: "{ticker} latest earnings results {current_quarter} {current_year}"
@@ -108,9 +167,11 @@ WebSearch: "{ticker} investment thesis bull bear case {current_year}"
 WebSearch: "{ticker} competitive landscape market share"
 ```
 
-**Purpose**: APIs give you numbers; WebSearch gives you narrative, context, and sentiment.
+**Purpose**: MCP and scripts give you numbers; WebSearch gives you narrative, context, and sentiment.
 
-→ **After Steps A1-A4, proceed to Step 2: Build Data Contract**
+Also use WebSearch to fill any Data Contract fields still blank after Tiers 1-2 (e.g., forward estimates, peer comparisons).
+
+-> **After Steps A1-A3, proceed to Step 2: Build Data Contract**
 
 ---
 
@@ -169,7 +230,7 @@ WebSearch: "{ticker} industry peers financial comparison"
 
 **Total queries**: 11-13 (quick mode), 24-28 (full mode)
 
-→ **After Steps B1-B4, proceed to Step 2: Build Data Contract**
+-> **After Steps B1-B4, proceed to Step 2: Build Data Contract**
 
 ---
 
@@ -231,7 +292,7 @@ Use the template and rules defined in `references/data_contract.md` to build the
 
 **Total**: 18-26 targeted queries for full mode.
 
-**Note**: In Claude Code environment (Path A), some of these may already be covered by Step A4. Skip duplicates.
+**Note**: In Path A, some of these may already be covered by Step A3. Skip duplicates.
 
 ---
 
@@ -239,12 +300,12 @@ Use the template and rules defined in `references/data_contract.md` to build the
 
 **If `{mode}` = "quick"**: Skip.
 
-**Claude Code**: Already fetched structured XBRL data in Step A2. This step adds filing-level context:
+**If Environment = "mcp"**: SEC filing data was already fetched via MCP in Step A1b. Use WebSearch only for supplemental filing context:
 ```
 WebSearch: "site:sec.gov {ticker} 10-K 10-Q {current_year}"
 ```
 
-**Cowork**: Only WebSearch is available:
+**If Environment = "claude-code" or "cowork"**: Only WebSearch is available:
 ```
 WebSearch: "site:sec.gov {ticker} 10-K 10-Q {current_year}"
 ```
@@ -261,10 +322,10 @@ Build the Coverage Log and check against thresholds:
 
 | Criterion | Threshold | Action if Fail |
 |-----------|-----------|----------------|
-| Unique sources | ≥ 30 | Continue searching until met or acknowledge gap |
-| Source types covered | ≥ 4 of 6 types | Add targeted queries for missing types |
-| Data Contract fields populated | ≥ 80% (claude-code) / ≥ 50% (cowork) | Note gaps in Data Quality Notes |
-| Sources dated within 12 months | ≥ 50% | Prioritize recent sources |
+| Unique sources | >= 30 | Continue searching until met or acknowledge gap |
+| Source types covered | >= 4 of 6 types | Add targeted queries for missing types |
+| Data Contract fields populated | >= 80% (mcp/claude-code) / >= 50% (cowork) | Note gaps in Data Quality Notes |
+| Sources dated within 12 months | >= 50% | Prioritize recent sources |
 
 **Source Types**: SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
 

@@ -1,24 +1,21 @@
-# 全脚本 Python 化 + Skill-Local 迁移
+# data-fetch MCP 迁移
 
-## Stream 1: data-fetch scripts
-- [x] 创建 `yahoo_fetch.py` (替代 yahoo-fetch.ts)
-- [x] 创建 `sec_edgar_fetch.py` (替代 sec-edgar-fetch.sh)
-- [x] 创建 `fred_fetch.py` (替代 fred-fetch.sh)
-- [x] 创建 `data-fetch/scripts/requirements.txt`
-- [x] 更新 `data-fetch/SKILL.md` 脚本调用
+## SKILL.md 重写
+- [x] Step 0: 环境检测从 curl 改为 MCP 工具可用性检测
+- [x] Step A1: 新增 Tier 1 MCP 工具调用（yfinance + sec-edgar）
+- [x] Step A2: 原脚本降级为 Tier 2 fallback
+- [x] Step A3: WebSearch 保留为 Tier 3
+- [x] Path B / Step 2-5: 保持不变
 
-## Stream 2: valuation scripts
-- [x] 创建 `calc_dcf.py` (替代 calc-dcf.ts)
-- [x] 创建 `calc_wacc.py` (替代 calc-wacc.ts)
-- [x] 创建 `valuation/scripts/requirements.txt`
-- [x] 更新 `valuation/SKILL.md` 脚本调用
+## data_contract.md
+- [x] 更新来源优先级: SEC EDGAR MCP > Yahoo Finance MCP > Python 脚本 > WebSearch
 
-## Stream 3: cleanup (依赖 Stream 1+2)
-- [x] 删除 `scripts/` 公共目录
-- [x] 删除旧 bash 脚本
-- [x] 更新 .gitignore
+## 脚本保留
+- [x] yahoo_fetch.py — 保留（MCP 无法获取 PE/margins/beta/analyst）
+- [x] sec_edgar_fetch.py — 保留（作为 SEC MCP 不可用时的 fallback）
+- [x] fred_fetch.py — 保留（无 FRED MCP，唯一自动化来源）
 
 ## 验证
-- [x] 运行所有 Python 脚本验证
-- [x] 确认旧文件已删除
-- [x] grep 检查无残留引用
+- [ ] 运行 /quick-check 确认 MCP 工具被优先调用
+- [ ] 检查 Data Contract 填充率
+- [ ] 模拟 MCP 不可用确认 fallback 正常
