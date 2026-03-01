@@ -5,7 +5,7 @@ argument-hint: "<ticker>"
 
 # /quick-check
 
-Quick valuation screen for a US-listed stock. Produces an Executive Summary with peer comps to help decide whether a full /research is warranted. Does NOT give a buy/sell rating.
+Quick valuation screen for a US-listed stock. Produces a mini investment memo covering 5 key dimensions to help decide whether a full /research is warranted. Does NOT give a buy/sell rating.
 
 ## Usage
 
@@ -18,9 +18,13 @@ Quick valuation screen for a US-listed stock. Produces an Executive Summary with
 
 1. Detects output language from user's input
 2. Fetches key financial data (MCP tools / scripts / WebSearch)
-3. Builds an Executive Summary with thesis points and key risks
-4. Runs peer comps (3-5 comparable companies) + reverse DCF
-5. Outputs a concise summary (800-1200 words) **in the user's language**
+3. Builds a 5-section mini investment memo:
+   - Company Overview & Key Metrics
+   - Thesis Framework (if-then pillars + falsification)
+   - Peer Comp Valuation (3-5 peers + implied valuation)
+   - Scenarios & Catalysts (bear/base/bull + E[TR])
+   - Decision Gates (4-gate quick screen)
+4. Outputs a structured summary (1200-1800 words) **in the user's language**
 
 ## Execution
 
@@ -49,69 +53,93 @@ Call `skills/data-fetch/SKILL.md` with `{mode}` = "quick":
 - Identify 3-5 comparable companies (same sector/industry, similar business model or scale)
 - For each peer, collect: Market Cap, EV/Revenue, EV/EBITDA, P/E (FWD), Revenue Growth, Gross Margin, FCF Margin
 - Calculate peer median for each metric
-- Apply peer median EV/Revenue and EV/EBITDA to {ticker} to derive implied price range
+- Apply peer median EV/Revenue, EV/EBITDA, and P/E to {ticker} to derive implied price range
 - Run reverse DCF: what revenue growth rate is the market pricing in at current price?
+- Derive **Fair Value Range** from implied valuation methods
 
-### Step 3: Executive Summary
+### Step 3: Scenario Analysis
 
-Synthesize data into an Executive Summary following the ■ bullet format from `references/investment_memo.md`:
-- **Investment Thesis**: 3 thesis points, each with a bold header and 2-3 sentences of supporting evidence with specific numbers
-- **Key Risks**: 2-3 risks, each with a bold header and 1-2 sentences quantifying impact
-- **Catalysts**: upcoming events in the next 6-12 months
+Build three scenarios for 12-24 month outlook:
+- **Bull**: best realistic case — assign probability, target price, total return
+- **Base**: most likely outcome — assign probability, target price, total return
+- **Bear**: downside case — assign probability, target price, total return
+- Calculate **E[TR]** (probability-weighted expected total return)
 
-**Do NOT assign a buy/sell/hold rating or star rating.** The purpose is to present facts and analysis for the user to decide.
+### Step 4: Thesis Construction
 
-### Step 4: Output
+Synthesize data into a Thesis Framework:
+- **Core Investment Question**: one sentence framing the key obstacle
+- **3 Thesis Pillars**: each in if-then format with a falsification condition
+- **Why Now**: time-sensitive reason with dates
+- **Variant View**: how our view differs from consensus
+- **Key Leading Indicator**: specific metric + threshold to watch
+
+### Step 5: Decision Gates
+
+Apply 4 quick gates using data from Steps 2-4:
+1. **Expected Return**: E[TR] ≥ 30%
+2. **Margin of Safety**: 1 − (Current Price / Fair Value Midpoint) ≥ 25%
+3. **Skew**: E[TR] / |Bear Return| ≥ 1.7×
+4. **Catalyst**: nearest catalyst within 24 months
+
+Count gates passed and provide one-sentence conclusion.
+
+### Step 6: Output
 
 Write the memo **entirely in `{output_language}`**. Template structure:
 
 ```markdown
 # {ticker} Quick Check | {date}
 
-**{company_name}** ({exchange}: {ticker}) — {one-line business description}
+**{company_name}** ({exchange}: {ticker}) — {one-line description}
 
 ---
 
-## Executive Summary
+## 1. Company Overview & Key Metrics
 
-**Fair Value Range**: ${low} – ${high} | **Current Price**: ${price}
-
-### Key Metrics Snapshot
+{2-3 句公司简介：主营业务、行业地位、核心驱动力}
 
 | Metric | Value | vs Peers |
 |--------|-------|----------|
 | Market Cap | $XB | |
-| Revenue (FYE) | $XM | |
-| Revenue Growth (YoY) | X% | above/below median |
+| Revenue (FYE) | $XB | YoY +X% |
 | Gross Margin | X% | above/below median |
-| EV/EBITDA (FWD) | Xx | premium/discount |
-| FCF Yield | X% | above/below median |
+| Operating Margin | X% | |
+| EV/EBITDA (TTM) | Xx | premium/discount |
+| Forward P/E | Xx | |
+| FCF Yield | X% | |
 | Net Debt/EBITDA | Xx | |
-| 52w Range | $XX - $XX | |
+| 52w Range | $XX - $XX | near high/low |
+| Beta | X.X | |
 
-### Investment Thesis
+## 2. Thesis Framework
 
-■ **[Thesis Point 1 — bold topic header].** 2-3 sentences with specific numbers and evidence.
+**核心投资问题**：{一句话概括投资必须跨越的核心障碍}
 
-■ **[Thesis Point 2 — bold topic header].** 2-3 sentences with specific numbers and evidence.
+**Thesis Pillars:**
 
-■ **[Thesis Point 3 — bold topic header].** 2-3 sentences with specific numbers and evidence.
+■ **[Pillar 1].** If {条件}, then {价值创造路径}.
+  Falsification: {什么事实能推翻这一点}
 
-### Key Risks
+■ **[Pillar 2].** If {条件}, then {价值创造路径}.
+  Falsification: {什么事实能推翻这一点}
 
-■ **[Risk 1 — bold topic header].** 1-2 sentences quantifying impact.
+■ **[Pillar 3].** If {条件}, then {价值创造路径}.
+  Falsification: {什么事实能推翻这一点}
 
-■ **[Risk 2 — bold topic header].** 1-2 sentences quantifying impact.
+**Why Now**: {为什么现在是关注这只股票的时机，带日期}
 
----
+**Variant View**: {市场共识是什么，我们的不同看法是什么}
 
-## Peer Comps
+**Key Leading Indicator**: {关键领先指标及其临界阈值}
+
+## 3. Peer Comp Valuation
 
 | Metric | {ticker} | {peer_1} | {peer_2} | {peer_3} | Peer Median |
 |--------|----------|----------|----------|----------|-------------|
 | Market Cap ($B) | | | | | |
-| EV/Revenue (FWD) | | | | | |
-| EV/EBITDA (FWD) | | | | | |
+| EV/Revenue | | | | | |
+| EV/EBITDA | | | | | |
 | P/E (FWD) | | | | | |
 | Revenue Growth % | | | | | |
 | Gross Margin % | | | | | |
@@ -121,22 +149,53 @@ Write the memo **entirely in `{output_language}`**. Template structure:
 
 | Method | Implied Price | vs Current |
 |--------|--------------|------------|
-| Peer EV/Revenue | $XX | +/-XX% |
-| Peer EV/EBITDA | $XX | +/-XX% |
-| Reverse DCF (implied growth) | XX% CAGR | vs actual XX% |
+| Peer Median EV/Revenue | $XX | +/-XX% |
+| Peer Median EV/EBITDA | $XX | +/-XX% |
+| Peer Median P/E × FWD EPS | $XX | +/-XX% |
+| Reverse DCF implied growth | XX% CAGR | vs consensus XX% |
 
----
+**Fair Value Range**: ${low} – ${high} | **Current**: ${price}
 
-## Catalysts (Next 6-12 Months)
+## 4. Scenarios & Catalysts
+
+### Scenarios (12-24 Months)
+
+| Scenario | Probability | Target Price | Total Return |
+|----------|------------|-------------|-------------|
+| Bull | XX% | $XX | +XX% |
+| Base | XX% | $XX | +/-XX% |
+| Bear | XX% | $XX | -XX% |
+| **E[TR]** | | | **+/-XX%** |
+
+Bull: {1-2 句描述}
+Base: {1-2 句描述}
+Bear: {1-2 句描述}
+
+### Catalysts (Next 6-12 Months)
 
 | Date | Event | Potential Impact |
 |------|-------|-----------------|
-| YYYY-MM | [Event] | [Impact] |
+| YYYY-MM | | |
 
-## What Would Change the View
+### What Would Change the View
 
-- **Positive triggers**: [specific conditions that would make the stock more attractive]
-- **Negative triggers**: [specific conditions that would raise concerns]
+- **Positive triggers**: {具体可量化条件}
+- **Negative triggers**: {具体可量化条件}
+
+## 5. Decision Gates
+
+快速检验 4 道投资门槛（不含 Quality Scorecard，留给完整 /research）：
+
+| Gate | Metric | Value | Threshold | Result |
+|------|--------|-------|-----------|--------|
+| 1. Expected Return | E[TR] | XX% | ≥ 30% | ✓/✗ |
+| 2. Margin of Safety | 1-(Price/FV Mid) | XX% | ≥ 25% | ✓/✗ |
+| 3. Skew | E[TR]/|Bear Return| | X.X× | ≥ 1.7× | ✓/✗ |
+| 4. Catalyst | {nearest catalyst} | {date} | Within 24mo | ✓/✗ |
+
+**Gates Passed: X/4** — {一句话总结：值得深入研究 / 需等待更好入场点 / 风险回报不对称}
+
+注：完整评级（Buy/Hold/Await/Sell）需要 Quality Scorecard，请运行 `/research` 获取。
 ```
 
 Save to: `Research/{ticker}/{date}_quick-check.md`
