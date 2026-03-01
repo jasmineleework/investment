@@ -18,13 +18,14 @@ Quick valuation screen for a US-listed stock. Produces a mini investment memo co
 
 1. Detects output language from user's input
 2. Fetches key financial data (MCP tools / scripts / WebSearch)
-3. Builds a 5-section mini investment memo:
+3. Runs full valuation (Comps + DCF + Reverse DCF + Fair Value Synthesis + Buy/Trim Zones)
+4. Builds a 5-section mini investment memo:
    - Company Overview & Key Metrics
    - Thesis Framework (if-then pillars + falsification)
-   - Peer Comp Valuation (3-5 peers + implied valuation)
+   - Full Valuation (Comps, DCF, Reverse DCF, Fair Value Range, Buy/Trim Zones)
    - Scenarios & Catalysts (bear/base/bull + E[TR])
    - Decision Gates (4-gate quick screen)
-4. Outputs a structured summary (1200-1800 words) **in the user's language**
+5. Outputs a structured summary **in the user's language**
 
 ## Execution
 
@@ -48,21 +49,24 @@ Call `skills/data-fetch/SKILL.md` with `{mode}` = "quick":
   - `"{ticker} vs competitors market share"`
   - `"{ticker} risks catalysts outlook"`
 
-### Step 2: Peer Comps
+### Step 2: Valuation (Full)
 
-- Identify 3-5 comparable companies (same sector/industry, similar business model or scale)
-- For each peer, collect: Market Cap, EV/Revenue, EV/EBITDA, P/E (FWD), Revenue Growth, Gross Margin, FCF Margin
-- Calculate peer median for each metric
-- Apply peer median EV/Revenue, EV/EBITDA, and P/E to {ticker} to derive implied price range
-- Run reverse DCF: what revenue growth rate is the market pricing in at current price?
-- Derive **Fair Value Range** from implied valuation methods
+Call `skills/valuation/SKILL.md` with all data from Step 1.
+
+This runs the complete three-method valuation:
+- **Comparable Company Analysis** — peer group, comp table, implied values, premium/discount
+- **DCF** — WACC, 5-year FCF projection, terminal value, sensitivity table
+- **Reverse DCF** — market-implied growth, reasonableness check
+- **Fair Value Synthesis** — triangulated fair value range (Low / Mid / High), Buy/Trim Zones
+
+All valuation outputs carry forward to Steps 3-5.
 
 ### Step 3: Scenario Analysis
 
-Build three scenarios for 12-24 month outlook:
-- **Bull**: best realistic case — assign probability, target price, total return
-- **Base**: most likely outcome — assign probability, target price, total return
-- **Bear**: downside case — assign probability, target price, total return
+Build three scenarios for 12-24 month outlook, anchoring target prices to the Fair Value Range from Step 2:
+- **Bull**: best realistic case — target near Fair Value High, assign probability, total return
+- **Base**: most likely outcome — target near Fair Value Mid, assign probability, total return
+- **Bear**: downside case — target near or below Fair Value Low, assign probability, total return
 - Calculate **E[TR]** (probability-weighted expected total return)
 
 ### Step 4: Thesis Construction
@@ -76,9 +80,9 @@ Synthesize data into a Thesis Framework:
 
 ### Step 5: Decision Gates
 
-Apply 4 quick gates using data from Steps 2-4:
+Apply 4 quick gates using valuation outputs from Step 2 and scenarios from Step 3:
 1. **Expected Return**: E[TR] ≥ 30%
-2. **Margin of Safety**: 1 − (Current Price / Fair Value Midpoint) ≥ 25%
+2. **Margin of Safety**: 1 − (Current Price / Fair Value Mid from valuation) ≥ 25%
 3. **Skew**: E[TR] / |Bear Return| ≥ 1.7×
 4. **Catalyst**: nearest catalyst within 24 months
 
@@ -133,28 +137,68 @@ Write the memo **entirely in `{output_language}`**. Template structure:
 
 **Key Leading Indicator**: {关键领先指标及其临界阈值}
 
-## 3. Peer Comp Valuation
+## 3. Valuation
 
-| Metric | {ticker} | {peer_1} | {peer_2} | {peer_3} | Peer Median |
-|--------|----------|----------|----------|----------|-------------|
-| Market Cap ($B) | | | | | |
-| EV/Revenue | | | | | |
-| EV/EBITDA | | | | | |
-| P/E (FWD) | | | | | |
-| Revenue Growth % | | | | | |
-| Gross Margin % | | | | | |
-| FCF Margin % | | | | | |
+### Peer Comps
 
-### Implied Valuation
+| Company | Ticker | Rev Growth | Gross Margin | Op Margin | EV/Rev | EV/GP | EV/EBITDA | P/E |
+|---------|--------|-----------|-------------|-----------|--------|-------|-----------|-----|
+| {peer_1} | | | | | | | | |
+| {peer_2} | | | | | | | | |
+| ... | | | | | | | | |
+| **Median** | | | | | | | | |
+| **{ticker}** | | | | | | | | |
+
+**Implied Valuation (Comps)**
 
 | Method | Implied Price | vs Current |
 |--------|--------------|------------|
 | Peer Median EV/Revenue | $XX | +/-XX% |
+| Peer Median EV/GP | $XX | +/-XX% |
 | Peer Median EV/EBITDA | $XX | +/-XX% |
 | Peer Median P/E × FWD EPS | $XX | +/-XX% |
-| Reverse DCF implied growth | XX% CAGR | vs consensus XX% |
 
-**Fair Value Range**: ${low} – ${high} | **Current**: ${price}
+{Premium/discount justification if applicable}
+
+### DCF
+
+**Key Assumptions**: WACC = X.X% | Terminal Growth = X.X% | Projection = 5Y
+
+| Year | Revenue | Growth | EBIT Margin | FCF |
+|------|---------|--------|-------------|-----|
+| Base | | | | |
+| Y1-Y5 | ... | ... | ... | ... |
+
+**DCF Fair Value**: $XX per share
+
+**Sensitivity Table** (Fair Value per share)
+
+| | WACC -1% | WACC Base | WACC +1% |
+|---|----------|-----------|----------|
+| **Growth +2%** | $XX | $XX | $XX |
+| **Growth Base** | $XX | $XX | $XX |
+| **Growth -2%** | $XX | $XX | $XX |
+
+### Reverse DCF
+
+- Market-implied revenue CAGR: XX% (vs consensus XX%)
+- Market-implied terminal margin: XX%
+- Assessment: {reasonable / aggressive / conservative} because {evidence}
+
+### Fair Value Synthesis
+
+| Method | Implied Value | Weight | Notes |
+|--------|--------------|--------|-------|
+| Comps (Median) | $XX | 35% | Based on X peers |
+| DCF (Base Case) | $XX | 40% | WACC=X%, g=Y% |
+| Reverse DCF | XX% implied growth | — | Reasonableness check |
+| **Weighted Fair Value** | **$XX** | | |
+
+| | Low | Mid | High |
+|---|-----|-----|------|
+| Fair Value | $XX | $XX | $XX |
+
+**Buy Zone**: $XX – $XX | **Trim Zone**: $XX – $XX | **Current**: ${price}
 
 ## 4. Scenarios & Catalysts
 
@@ -206,7 +250,5 @@ Save to: `Research/{ticker}/{date}_quick-check.md`
 - 60+ source coverage
 - Complete Quality Scorecard (0-100)
 - Buy/Hold/Sell rating or star rating
-- Detailed DCF model with explicit assumptions
-- Entry guidance with price zones
 
 For comprehensive analysis, use `/research {ticker}`.
