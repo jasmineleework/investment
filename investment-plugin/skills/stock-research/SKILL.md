@@ -15,42 +15,7 @@ Generate institutional-grade investment memos for US-listed stocks. This skill o
 
 ---
 
-## Step 1: Environment & Capability Detection
-
-Detect the runtime environment. Follow this sequence — stop at the first match:
-
-### 1a. Check for Deep Research Tools
-
-Look for `launch_extended_search_task`, `deep_research`, or any MCP tool with "research" in its name.
-
-**If found → Branch B (Full Deep Research)**:
-- Set `{research_mode}` = `"deep_research"`
-- Proceed to Step 2
-
-### 1b. Check for Code-Editing Tools
-
-Look for: `Bash`, `Edit`, `Write`, `Read`, `Glob`, `Grep`, `TodoWrite`, `Task`.
-
-**If found → Branch A (Claude Code / Cowork)**:
-- Set `{research_mode}` = `"websearch_fallback"`
-- Proceed to Step 2
-
-### 1c. Check for Claude.ai Signature Tools
-
-Look for: `artifacts`, `analysis_tool`.
-
-**If found → Branch C (Claude.ai)**:
-- Offer Option A (Quick Research with WebSearch) or Option B (Enable Research mode)
-- Wait for user choice, then proceed
-
-### 1d. Fallback
-
-- Set `{research_mode}` = `"websearch_fallback"`
-- Proceed to Step 2
-
----
-
-## Step 2: Stock Ticker Confirmation
+## Step 1: Stock Ticker Confirmation
 
 Parse user input to identify the target stock:
 
@@ -58,7 +23,7 @@ Parse user input to identify the target stock:
 - Use WebSearch to verify: `"{ticker} stock NYSE OR NASDAQ"`
 - Confirm full company name, exchange, and ticker
 - Set `{market}` = `US` (Phase 1 only supports US)
-- Proceed to Step 3
+- Proceed to Step 2
 
 **Multiple tickers**: List all detected, ask user to select ONE.
 
@@ -68,15 +33,15 @@ Parse user input to identify the target stock:
 
 ---
 
-## Step 3: Language Detection & Parameter Setup
+## Step 2: Language Detection & Parameter Setup
 
-### 3a. Detect Language
+### 2a. Detect Language
 
 - Chinese input → `{output_language}` = "中文"
 - English input → `{output_language}` = "English"
 - Other → match user's language
 
-### 3b. Load Parameters
+### 2b. Load Parameters
 
 Read `references/markets/us.md` (contains both market config and decision thresholds) to set:
 
@@ -97,7 +62,7 @@ Read `references/markets/us.md` (contains both market config and decision thresh
 
 ---
 
-## Step 4: Execute Research
+## Step 3: Execute Research
 
 ### Phase 1 — Data Collection & Data Contract
 
@@ -113,7 +78,7 @@ This produces:
 
 ### Phase 2 — Batch 1: Skeleton Sections
 
-Read `references/investment_memo.md` with all parameters substituted.
+Read `references/investment_memo.md` (skill-local) with all parameters substituted.
 
 **Before writing any section**, read `Research/{ticker}/data_contract.md` and use it as the authoritative source for all financial figures.
 
@@ -168,22 +133,68 @@ Purpose: Complete company-level deep analysis.
 
 **This phase is MANDATORY — do NOT skip it regardless of context window constraints.**
 
-Before saving the final memo, read and execute `skills/output-validator/SKILL.md`.
+Before saving the final memo, run all 5 checks below:
 
-The validator checks:
-1. **Structural completeness** — All required components present
-2. **Internal consistency** — Numbers match across sections (E[TR], fair value, rating logic)
-3. **Writing standards** — Language, length, tagging, date formatting
-4. **Coverage quality** — Source thresholds met or gaps acknowledged
-5. **Risk & bias review** — Bull bias detection, disconfirming evidence check
+#### Check 1: Structural Completeness
 
-**If validator returns FAIL**: Fix the flagged issues and re-run validator.
-**If validator returns PASS or PASS WITH NOTES**: Proceed to output.
-**If context window is running low**: Run a minimal validation (Check 1 + Check 2 only) and append a note that full validation was not completed.
+Verify all required components exist: Executive Summary (Rating, Fair Value Range, E[TR], Buy/Trim Zones, Catalysts, Change Triggers), Rating & Target Price, Investment Thesis & Variant View, Quality Scorecard (5 dimensions + total), Decision Rules (4 gates), Entry Readiness Assessment, Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum).
+
+**If any component is missing**: Draft it before proceeding.
+
+#### Check 2: Internal Consistency
+
+Cross-check key numbers across sections:
+- Rating vs. Gates: Rating = Buy only if all 4 gates pass + Quality ≥ 70
+- E[TR]: §21 = Executive Summary = Decision Rules
+- Fair Value Range: §20 = Executive Summary = Decision Rules
+- Quality Score: Scorecard total = 5-dimension weighted sum × 20
+- Scenario probabilities: Bull + Base + Bear = 100%
+- Buy/Trim Zones: Derived from Fair Value per valuation skill formula
+- Revenue figures: §12 = §9 decomposition total
+- Current price: Same across all sections
+
+**If any mismatch**: Resolve by recalculating from the source skill's output, not by averaging.
+
+#### Check 3: Writing Standards
+
+- Language: Entire memo in `{output_language}`
+- Section length: Each section 300-600 words
+- Total length: 8,000-10,000 words
+- Tagging: Every paragraph tagged (Fact)/(Analysis)/(Inference)
+- Dates: No "recently" or "last quarter" — exact dates only
+- Calculations shown: Key estimates have visible math
+- Acronyms: Expanded on first use
+
+#### Check 4: Coverage Quality
+
+Review the Coverage Log and Validator from data-fetch:
+- Total unique sources ≥ 30
+- Source types covered ≥ 4 of 6 (SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert)
+- MCP data populated ≥ 80% of Data Contract fields
+- Sources within 12 months ≥ 50%
+
+**If any criterion fails**: Do NOT block output. Append a Research Methodology Note stating which criteria fell short.
+
+#### Check 5: Risk & Bias Review
+
+- Bull bias: Is the rating justified by evidence, or overly optimistic?
+- Bear acknowledgment: Are bear-case risks clearly stated with quantified impact?
+- Disconfirming evidence: At least one disconfirming source cited?
+- Assumption transparency: Key assumptions (growth rate, margin, discount rate) explicitly stated?
+- Conflict check: Do thesis pillars and risk factors logically coexist?
+
+**If bull bias detected**: Add a "Devil's Advocate" paragraph in the Executive Summary.
+
+#### Result Handling
+
+- **PASS** → Proceed to output
+- **PASS WITH NOTES** → Append notes, proceed to output
+- **FAIL** → Fix flagged issues and re-run all 5 checks
+- **Context window low** → Run Check 1 + Check 2 only, append note that full validation was not completed
 
 ---
 
-## Step 5: Output
+## Step 4: Output
 
 ### Output Sequence
 
@@ -211,17 +222,16 @@ Where:
 
 ```
 stock-research (this skill)
-├── references/markets/{market}.md  ← market config + decision thresholds
-├── references/investment_memo.md   ← section writing requirements only
-├── skills/data-fetch/              ← data collection + Data Contract + coverage validation
+├── references/investment_memo.md       ← section writing requirements (skill-local)
+├── references/markets/{market}.md      ← market config + decision thresholds (plugin-level, shared)
+├── skills/data-fetch/                  ← data collection + Data Contract + coverage validation
 │   └── Research/{ticker}/data_contract.md  ← SINGLE SOURCE OF TRUTH for all quantitative data
-├── skills/valuation/               ← DCF + comps + reverse DCF
-├── skills/quality-scorecard/       ← 5-dimension quality scoring (industry-adaptive)
-├── skills/decision-rules/          ← 4-gate rating engine
-└── skills/output-validator/        ← pre-output quality gate (MANDATORY)
+├── skills/valuation/                   ← DCF + comps + reverse DCF
+├── skills/quality-scorecard/           ← 5-dimension quality scoring (industry-adaptive)
+└── skills/decision-rules/              ← 4-gate rating engine
 ```
 
 **Key Principles**:
 1. Each skill is the **single source of truth** for its domain. No logic is duplicated.
 2. The **Data Contract** (`data_contract.md`) is the single source of truth for quantitative data — all sections must reference it.
-3. The **Output Validator** is mandatory — the memo cannot be saved without passing validation.
+3. **Output Validation** (Phase 5) is mandatory and inline — the memo cannot be saved without passing all 5 checks.

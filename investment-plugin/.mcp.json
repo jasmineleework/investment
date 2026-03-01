@@ -1,3 +1,15 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "yfinance": {
+      "command": "uvx",
+      "args": ["mcp-yahoo-finance"]
+    },
+    "sec-edgar": {
+      "command": "uvx",
+      "args": ["sec-edgar-mcp"],
+      "env": {
+        "SEC_EDGAR_USER_AGENT": "Investment Research (research@example.com)"
+      }
+    }
+  }
 }
