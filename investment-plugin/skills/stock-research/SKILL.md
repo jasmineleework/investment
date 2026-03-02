@@ -134,14 +134,10 @@ Purpose: Complete company-level deep analysis.
 ### Phase 4 — Batch 3: Rating & Assembly
 
 1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md`
-2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md`
-3. **Entry Readiness Assessment** — Based on decision-rules output
-4. **Executive Summary** — Write LAST, based on all prior analysis:
-   - Rating, Fair Value Range, Expected Total Return
-   - Buy/Trim Zones, Dated Catalysts
-   - What Would Change This Rating
-5. **Coverage Log + Coverage Validator** — From data-fetch output
-6. **Appendix** — Models, data tables, key assumptions
+2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md` (output feeds into Executive Summary Gate table, NOT a standalone section)
+3. **Executive Summary** — Write LAST, based on all prior analysis. This is the ONLY place for rating, gate decisions, and entry zones — see `references/investment_memo.md` Executive Summary Template.
+4. **Coverage Log + Coverage Validator** — From data-fetch output
+5. **Appendix** — Models, data tables, key assumptions
 
 ### Phase 5 — Output Validation (MANDATORY)
 
@@ -151,7 +147,7 @@ Before saving the final memo, run all 6 checks below:
 
 #### Check 1: Structural Completeness
 
-Verify all required components exist: Executive Summary (Rating Box, Entry Guidance, E[TR], Catalysts, Change Triggers), Rating & Target Price, Investment Thesis & Variant View, Quality Scorecard (5 dimensions + total), Decision Rules (4 gates), Entry Readiness Assessment, Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum).
+Verify all required components exist: Executive Summary (Rating Box with Gate table, Entry Zones, Thesis, Risks, Catalysts, Change Triggers), Quality Scorecard (5 dimensions + total), Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum). Note: Rating & Target Price, Decision Rules, and Entry Readiness Assessment are part of the Executive Summary — do NOT check for them as standalone sections.
 
 - **Minimum table count**: Report must contain at least 12 tables (Financial Summary, Peer Comparison, and DCF Sensitivity are mandatory).
 - **Assumption documentation**: Appendix key assumptions narrative must be at least 1,000 words.
@@ -232,14 +228,14 @@ If found:
 ### Output Sequence
 
 ```
-1. Executive Summary
-2. Rating & Target Price
-3. Investment Thesis & Variant View
-4. Decision Rules / Quality Scorecard / Entry Assessment
-5. Sections 1-21
-6. Coverage Log + Coverage Validator
-7. Appendix
+1. Executive Summary (includes Rating Box, Gate table, Entry Zones — all in one place)
+2. Quality Scorecard (standalone — substantive scoring breakdown)
+3. Sections 1-21
+4. Coverage Log + Coverage Validator
+5. Appendix
 ```
+
+**No standalone sections for**: Rating & Target Price, Investment Thesis & Variant View, Decision Rules, Entry Readiness Assessment. These are either in Executive Summary or in their respective §sections.
 
 ### File Output
 

@@ -32,6 +32,8 @@ Your task is to produce a decision-ready, source-backed investment memorandum on
 ### Language
 - **All output in {output_language}.** Entire memo, including Executive Summary, all 21 sections, and Appendix.
 - Use professional financial terminology; for key English terms, provide {output_language} translation with English in parentheses on first use.
+- **Section headers**: When `{output_language}` = 中文, translate section headers to Chinese. Keep `§X` prefix for cross-referencing. Example: `## §2 市场结构与规模` (not `## Section 2: Market Structure & Size`).
+- **Purpose lines are writer instructions ONLY**: The `*Purpose — ...*` lines in this template are guidance for the writer. They must NOT appear in the output memo — not as subtitles, not as italicized notes, not in any form.
 
 ### Style
 - Concise, structured, neutral tone.
@@ -91,15 +93,17 @@ The Executive Summary appears first in the output and is written **last** (after
 
 ### Executive Summary Template
 
+The Executive Summary is the ONE place for all rating, entry, and decision information. No separate "Rating & Target Price", "Decision Rules", or "Entry Readiness Assessment" sections exist outside this.
+
 ```
 ## Executive Summary
 
-### Rating Box
+### Rating & Entry Decision
 
 | | |
 |---|---|
 | **Rating** | {Rating} |
-| **Quality Score** | XX / 100 (Gates X/4) |
+| **Quality Score** | XX / 100 |
 | **Expected Return** | XX% (24-mo E[TR]) |
 | **Price** ({date}) | $XX.XX |
 | **Target Price** | $XX.XX (Fair Value Mid) |
@@ -107,12 +111,16 @@ The Executive Summary appears first in the output and is written **last** (after
 | **52-Week Range** | $XX.XX – $XX.XX |
 | **Analyst Consensus** | X Buy / X Hold / X Sell — Mean Target $XX.XX |
 
-### Entry Guidance
+| Gate | Metric | Value | Threshold | Result |
+|------|--------|-------|-----------|--------|
+| 1. Expected Return | E[TR] | XX% | ≥ 30% | ✓/✗ |
+| 2. Margin of Safety | MOS | XX% | ≥ 25% | ✓/✗ |
+| 3. Skew | E[TR]/|Bear| | X.X× | ≥ 1.7× | ✓/✗ |
+| 4. Catalyst | [name] | [date] | Within 24mo | ✓/✗ |
 
 | Zone | Price Range | Action |
 |------|------------|--------|
-| Buy Zone | $X – $X | Initiate full position |
-| Add Zone | $X – $X | Add on pullback |
+| Buy Zone | $X – $X | Initiate position |
 | Hold Zone | $X – $X | Maintain position |
 | Trim Zone | Above $X | Reduce exposure |
 
@@ -145,10 +153,10 @@ The Executive Summary appears first in the output and is written **last** (after
 ### Executive Summary Rules
 
 1. Use the **■ bullet format** for thesis points and risks: `■ **Bold header.** Detail sentences.`
-2. Include the **Rating Box** table — pull all numbers from Data Contract and valuation output.
-3. Include the **Entry Guidance** table with price zones derived from valuation.
-4. Include the **Catalysts** table with exact dates.
-5. Target length: 500-800 words.
+2. Include the **Rating & Entry Decision** tables — Rating Box + Gate table + Entry Zones consolidated in one place.
+3. Include the **Catalysts** table with exact dates.
+4. Target length: 500-800 words.
+5. **No separate sections**: Do NOT create standalone "Rating & Target Price", "Decision Rules", or "Entry Readiness Assessment" sections. All this information lives here.
 
 ---
 
