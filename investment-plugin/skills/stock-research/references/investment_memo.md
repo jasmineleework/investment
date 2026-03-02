@@ -105,6 +105,7 @@ The Executive Summary appears first in the output and is written **last** (after
 | **Target Price** | $XX.XX (Fair Value Mid) |
 | **Fair Value Range** | $XX – $XX – $XX (Bear–Base–Bull) |
 | **52-Week Range** | $XX.XX – $XX.XX |
+| **Analyst Consensus** | X Buy / X Hold / X Sell — Mean Target $XX.XX |
 
 ### Entry Guidance
 
@@ -232,6 +233,7 @@ Source: DCF model. Highlighted cell = base case.
 - List specific facts that could falsify each pillar to enable refutation.
 - Provide a dated, one-sentence "why now" catalyst explaining timing.
 - Explain the variant view — the edge versus consensus — and why the market misses it.
+- Quantify the variant view gap: compare your fair value estimate with analyst consensus mean target price. State the percentage divergence and explain whether the gap reflects your thesis or a market blind spot.
 - Identify the key leading indicator and its critical threshold that would falsify the thesis within two quarters.
 
 ### Section 2: Market Structure & Size
@@ -390,6 +392,7 @@ Source: DCF model. Highlighted cell = base case.
 - Summarize leadership track record, stability, org design, and succession readiness.
 - Report engineering velocity — release cadence, defect and incident rates.
 - Triangulate customer sentiment using CSAT, NPS, peer reviews, community signals.
+- Assess institutional conviction: report institutional ownership %, top holders (distinguish passive index vs. active managers), and quarter-over-quarter net change. Flag if ownership is unusually low (<30%, potential discovery) or high with recent outflows (crowding risk).
 - Flag any single fatal leadership gap in 12-24 months.
 - Identify the operational-cadence metric most predictive of misses.
 
@@ -413,6 +416,7 @@ Source: DCF model. Highlighted cell = base case.
 - Lead with leading indicators and mitigations; cross-reference §13 and §17.
 - Flag the biggest risk in next 12 months, quantify P&L impact, outline recovery plan.
 - Define an objective stop-loss or escalation trigger.
+- If insider sell/buy ratio (by value) exceeds 5× over 180 days, flag under key-person risk and cross-reference §21 monitoring signals.
 
 ### Section 19: M&A Strategy & Optionality
 *Purpose — Inorganic growth*
@@ -433,6 +437,7 @@ Delegate to `skills/valuation/SKILL.md` for the full valuation analysis. This se
 - Reverse DCF with market-implied expectations
 - Fair value range (Low/Mid/High) and required margin of safety
 - Buy/Trim zones
+- Consensus comparison: present analyst target price range (low/mean/high) alongside your fair value range. Show rating distribution and 3-month trend direction. If consensus and your valuation diverge by >15%, explain the source of disagreement. Include a comparison mini-table: Analyst Consensus vs Your Estimate (target price, implied return, rating).
 - Key disagreement with market consensus
 
 ### Section 21: Scenarios, Catalysts & Monitoring Plan
@@ -445,6 +450,7 @@ Delegate to `skills/valuation/SKILL.md` for the full valuation analysis. This se
 - List near-term catalysts with exact dates and quantified impact.
 - Provide entry plan with Buy/Add/Trim/Exit zones.
 - Monitor early-warning signals with "symptom → action" mapping.
+- Include insider trading as a monitoring signal: report 180-day buy/sell ratio (by value) and flag cluster buy signals. Exclude routine RSU exercises and 10b5-1 plan sales from sentiment analysis. If net insider selling exceeds 3× buying by value, add to the "symptom → action" table.
 - Define stop/review level for metric breach or price hitting bear zone.
 - Rank expected return per unit downside against two alternative investments.
 - Close with three positive and three negative "change-my-mind triggers."

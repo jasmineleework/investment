@@ -31,6 +31,8 @@ def fetch_all(symbol: str) -> dict:
         "cashFlow": None,
         "historicalPrices": None,
         "analystRatings": None,
+        "majorHolders": None,
+        "institutionalHolders": None,
         "errors": [],
     }
 
@@ -139,6 +141,20 @@ def fetch_all(symbol: str) -> dict:
             result["analystRatings"] = {"trend": []}
     except Exception as e:
         result["errors"].append(f"analystRatings: {e}")
+
+    # Major holders (institutional/insider ownership %)
+    try:
+        major = t.major_holders
+        result["majorHolders"] = _df_to_records(major) if major is not None and not major.empty else []
+    except Exception as e:
+        result["errors"].append(f"majorHolders: {e}")
+
+    # Top institutional holders
+    try:
+        inst = t.institutional_holders
+        result["institutionalHolders"] = _df_to_records(inst.head(10)) if inst is not None and not inst.empty else []
+    except Exception as e:
+        result["errors"].append(f"institutionalHolders: {e}")
 
     return result
 
