@@ -10,6 +10,7 @@ history_context/
 
 # Claude
 .claude/
+.mcp.json
 
 # Research output (local only, not tracked)
 Research/
