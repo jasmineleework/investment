@@ -82,6 +82,7 @@ Call these tools in parallel:
 | `get_dividends` | `symbol: "{ticker}"` | Dividend history |
 | `get_earning_dates` | `symbol: "{ticker}", limit: 4` | Upcoming/recent earnings dates |
 | `get_news` | `symbol: "{ticker}"` | Recent news headlines |
+| `get_recommendations` | `symbol: "{ticker}"` | Analyst rating distribution (strongBuy/buy/hold/sell/strongSell) + trend |
 
 **Note**: Yahoo Finance MCP does NOT have balance sheet, quote-level fields (P/E, margins, beta), or company profile tools. These come from SEC MCP and scripts.
 
@@ -95,7 +96,7 @@ For US stocks, call these tools in parallel:
 | `get_key_metrics` | `identifier: "{ticker}"` | Key XBRL metrics (revenue, net income, assets, debt, equity, etc.) |
 | `get_company_info` | `identifier: "{ticker}"` | Company name, CIK, SIC, exchange, fiscal year end |
 | `get_segment_data` | `identifier: "{ticker}"` | Revenue by segment/geography |
-| `get_insider_summary` | `identifier: "{ticker}", days: 180` | Insider trading activity summary |
+| `get_insider_summary` | `identifier: "{ticker}", days: 180` | Insider trading activity summary → maps to Data Contract "Insider Activity (180 days)" |
 
 **For full mode**, also call:
 
@@ -103,7 +104,7 @@ For US stocks, call these tools in parallel:
 |------|-----------|-----------------|
 | `get_recent_filings` | `identifier: "{ticker}", form_type: "10-K", days: 365` | Latest 10-K filing info |
 | `compare_periods` | `identifier: "{ticker}", metric: "Revenues", start_year: {FY-3}, end_year: {FY}` | Revenue trend with CAGR |
-| `analyze_insider_sentiment` | `identifier: "{ticker}", months: 6` | Insider buy/sell pattern analysis |
+| `analyze_insider_sentiment` | `identifier: "{ticker}", months: 6` | Insider buy/sell pattern analysis → maps to Data Contract "Insider Activity (180 days)" |
 
 **SEC EDGAR is authoritative for**: balance sheet, historical financials, segment data, insider activity. Its numbers take priority over other sources when conflicts arise.
 
@@ -127,6 +128,7 @@ python3 yahoo_fetch.py {ticker}
 - Risk metrics: beta, 52-week range
 - Profile: sector, industry, market cap, enterprise value, shares outstanding
 - Analyst consensus: target price, ratings, EPS estimates
+- Institutional ownership: major holders, top institutional holders (Tier 2 fallback for MCP gaps)
 
 **If MCP provided all financials**: Still run this script for P/E, margins, beta, and analyst data.
 **If MCP was unavailable**: This script becomes the primary data source for everything.

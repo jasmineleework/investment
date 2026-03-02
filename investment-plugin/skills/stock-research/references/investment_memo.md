@@ -38,8 +38,40 @@ Your task is to produce a decision-ready, source-backed investment memorandum on
 - Each section: **300-600 words**. Favor tables, bullet points, and calculations over lengthy prose.
 - Total memo target: **8,000-10,000 words**.
 - **Section numbering**: Use "Section 1" or "§1" format. Never use "段落X.Y" or "Section X.Y paragraph" style references.
-- **Comparison tables**: Each section SHOULD include at least one table where applicable (peer comparison, historical trend, metric summary). Tables increase information density and readability.
 - **Data source**: All financial figures must come from the Data Contract (`Research/{ticker}/data_contract.md`). Do not re-derive or estimate numbers independently.
+
+### Notation Conventions
+
+| Convention | Format | Example |
+|------------|--------|---------|
+| Year marker | Historical "A", Estimate "E" | `FY2024A`, `FY2025E` |
+| Multiples | XX.Xx | `12.5x`, `3.2x` |
+| Currency | $XXB / $XXM / $XX.XX | `$150B`, `$2.3M` |
+| Source attribution | Bottom of every table | `Source: Company filings, Data Contract.` |
+
+### Bullet Format
+
+Use ■ format for core analysis paragraphs in each section:
+
+```
+■ **[Bold Topic Header capturing main point].** 3-5 sentences of detail
+with specific numbers, comparisons, and analysis. Lead with numbers and
+quantification where possible. Use "vs." not "versus". Be specific and concrete.
+
+■ **[Second Topic Header].** [3-5 sentences of detailed explanation...]
+
+■ **[Third Topic Header].** [3-5 sentences of detailed explanation...]
+
+■ **[Fourth Topic Header - Optional].** [3-5 sentences...]
+```
+
+Each section's core analysis uses 3-4 ■ bullets — quantify first, then explain.
+
+### Table Density Principle
+
+- Every section must include at least one table (comparison, trend, or metric summary).
+- Tables take priority over long prose paragraphs; maximize information density.
+- No "orphan sections" — a section with pure text and no data-backed table is considered incomplete.
 
 ### Tagging & Rigor
 - Tag each paragraph as **(Fact)** / **(Analysis)** / **(Inference)**.
@@ -62,20 +94,27 @@ The Executive Summary appears first in the output and is written **last** (after
 ```
 ## Executive Summary
 
-**{stock_name} ({stock_ticker}) — {Rating}**
-**Fair Value Range**: ${low} – ${mid} – ${high} | **Current Price**: ${price} | **E[TR]**: X%
-**Quality Score**: XX/100 | **Gates Passed**: X/4
+### Rating Box
 
-### Key Metrics Snapshot
+| | |
+|---|---|
+| **Rating** | {Rating} |
+| **Quality Score** | XX / 100 (Gates X/4) |
+| **Expected Return** | XX% (24-mo E[TR]) |
+| **Price** ({date}) | $XX.XX |
+| **Target Price** | $XX.XX (Fair Value Mid) |
+| **Fair Value Range** | $XX – $XX – $XX (Bear–Base–Bull) |
+| **52-Week Range** | $XX.XX – $XX.XX |
+| **Analyst Consensus** | X Buy / X Hold / X Sell — Mean Target $XX.XX |
 
-| Metric | Value | vs Peers |
-|--------|-------|----------|
-| Market Cap | $XB | |
-| Revenue (FYE) | $XM | |
-| Revenue Growth | X% | |
-| EV/EBITDA (FWD) | Xx | |
-| FCF Yield | X% | |
-| Net Debt/EBITDA | Xx | |
+### Entry Guidance
+
+| Zone | Price Range | Action |
+|------|------------|--------|
+| Buy Zone | $X – $X | Initiate full position |
+| Add Zone | $X – $X | Add on pullback |
+| Hold Zone | $X – $X | Maintain position |
+| Trim Zone | Above $X | Reduce exposure |
 
 ### Investment Thesis
 
@@ -90,15 +129,6 @@ The Executive Summary appears first in the output and is written **last** (after
 ■ **[Risk 1 — bold topic header].** 2-3 sentences quantifying impact and probability.
 
 ■ **[Risk 2 — bold topic header].** 2-3 sentences quantifying impact and probability.
-
-### Entry Guidance
-
-| Zone | Price Range | Action |
-|------|------------|--------|
-| Buy Zone | $X – $X | Full position |
-| Add Zone | $X – $X | Add on pullback |
-| Hold Zone | $X – $X | Maintain position |
-| Trim Zone | Above $X | Reduce |
 
 ### Catalysts (Next 12 Months)
 
@@ -115,10 +145,81 @@ The Executive Summary appears first in the output and is written **last** (after
 ### Executive Summary Rules
 
 1. Use the **■ bullet format** for thesis points and risks: `■ **Bold header.** Detail sentences.`
-2. Include the **Key Metrics Snapshot** table — pull all numbers from Data Contract.
+2. Include the **Rating Box** table — pull all numbers from Data Contract and valuation output.
 3. Include the **Entry Guidance** table with price zones derived from valuation.
 4. Include the **Catalysts** table with exact dates.
 5. Target length: 500-800 words.
+
+---
+
+## Standard Table Templates
+
+Reusable table structures referenced by multiple sections. Adapt column count and labels to the specific company and industry.
+
+### Template A: Multi-Year Financial Summary
+
+Used in §12 Financial Condition and Appendix.
+
+```
+|                    | FY20XXA | FY20XXA | FY20XXA | FY20XXE | FY20XXE |
+|--------------------|---------|---------|---------|---------|---------|
+| Revenue ($M)       |         |         |         |         |         |
+| Revenue Growth (%) |         |         |         |         |         |
+| Gross Margin (%)   |         |         |         |         |         |
+| EBITDA ($M)        |         |         |         |         |         |
+| EBITDA Margin (%)  |         |         |         |         |         |
+| Net Income ($M)    |         |         |         |         |         |
+| FCF ($M)           |         |         |         |         |         |
+| FCF Margin (%)     |         |         |         |         |         |
+| EPS ($)            |         |         |         |         |         |
+Source: Company filings, Data Contract.
+```
+
+### Template B: Peer Comparison
+
+Used in §5 Competitive Landscape and §20 Valuation Framework. Do not hard-code columns — select from the two tiers below based on industry and analysis purpose.
+
+**Core Columns** (required):
+- Company — standardized name format
+- Revenue — scale metric (LTM / quarterly / annual per context)
+- Revenue Growth — YoY %
+- Gross Profit & Gross Margin — baseline profitability
+- EBITDA & EBITDA Margin — operating efficiency
+
+**Optional Columns** (select by industry/purpose):
+- Quarterly vs LTM — when seasonality is material, include both
+- FCF & FCF Margin — SaaS or capital-intensive businesses
+- Net Income — mature profitable companies
+- Operating Income — when D&A varies significantly across peers
+- CapEx metrics — asset-heavy industries
+- Rule of 40 — SaaS-specific (Growth% + Margin%)
+- FCF Conversion — earnings quality analysis
+
+```
+| Company    | Revenue | Rev Growth | Gross Margin | EBITDA Margin | [Optional...] |
+|------------|---------|------------|--------------|---------------|---------------|
+| {Target}   |         |            |              |               |               |
+| Peer 1     |         |            |              |               |               |
+| Peer 2     |         |            |              |               |               |
+| Peer 3     |         |            |              |               |               |
+| **Median** |         |            |              |               |               |
+Source: Company filings, market data.
+```
+
+### Template C: DCF Sensitivity
+
+Used in §20 Valuation Framework and Appendix.
+
+```
+| WACC \ Terminal Growth | 2.0% | 2.5% | 3.0% | 3.5% | 4.0% |
+|------------------------|------|------|------|------|------|
+| 8.0%                   |      |      |      |      |      |
+| 9.0%                   |      |      |      |      |      |
+| 10.0%                  |      |      |      |      |      |
+| 11.0%                  |      |      |      |      |      |
+| 12.0%                  |      |      |      |      |      |
+Source: DCF model. Highlighted cell = base case.
+```
 
 ---
 
@@ -132,6 +233,7 @@ The Executive Summary appears first in the output and is written **last** (after
 - List specific facts that could falsify each pillar to enable refutation.
 - Provide a dated, one-sentence "why now" catalyst explaining timing.
 - Explain the variant view — the edge versus consensus — and why the market misses it.
+- Quantify the variant view gap: compare your fair value estimate with analyst consensus mean target price. State the percentage divergence and explain whether the gap reflects your thesis or a market blind spot.
 - Identify the key leading indicator and its critical threshold that would falsify the thesis within two quarters.
 
 ### Section 2: Market Structure & Size
@@ -290,6 +392,7 @@ The Executive Summary appears first in the output and is written **last** (after
 - Summarize leadership track record, stability, org design, and succession readiness.
 - Report engineering velocity — release cadence, defect and incident rates.
 - Triangulate customer sentiment using CSAT, NPS, peer reviews, community signals.
+- Assess institutional conviction: report institutional ownership %, top holders (distinguish passive index vs. active managers), and quarter-over-quarter net change. Flag if ownership is unusually low (<30%, potential discovery) or high with recent outflows (crowding risk).
 - Flag any single fatal leadership gap in 12-24 months.
 - Identify the operational-cadence metric most predictive of misses.
 
@@ -313,6 +416,7 @@ The Executive Summary appears first in the output and is written **last** (after
 - Lead with leading indicators and mitigations; cross-reference §13 and §17.
 - Flag the biggest risk in next 12 months, quantify P&L impact, outline recovery plan.
 - Define an objective stop-loss or escalation trigger.
+- If insider sell/buy ratio (by value) exceeds 5× over 180 days, flag under key-person risk and cross-reference §21 monitoring signals.
 
 ### Section 19: M&A Strategy & Optionality
 *Purpose — Inorganic growth*
@@ -333,6 +437,7 @@ Delegate to `skills/valuation/SKILL.md` for the full valuation analysis. This se
 - Reverse DCF with market-implied expectations
 - Fair value range (Low/Mid/High) and required margin of safety
 - Buy/Trim zones
+- Consensus comparison: present analyst target price range (low/mean/high) alongside your fair value range. Show rating distribution and 3-month trend direction. If consensus and your valuation diverge by >15%, explain the source of disagreement. Include a comparison mini-table: Analyst Consensus vs Your Estimate (target price, implied return, rating).
 - Key disagreement with market consensus
 
 ### Section 21: Scenarios, Catalysts & Monitoring Plan
@@ -345,6 +450,7 @@ Delegate to `skills/valuation/SKILL.md` for the full valuation analysis. This se
 - List near-term catalysts with exact dates and quantified impact.
 - Provide entry plan with Buy/Add/Trim/Exit zones.
 - Monitor early-warning signals with "symptom → action" mapping.
+- Include insider trading as a monitoring signal: report 180-day buy/sell ratio (by value) and flag cluster buy signals. Exclude routine RSU exercises and 10b5-1 plan sales from sentiment analysis. If net insider selling exceeds 3× buying by value, add to the "symptom → action" table.
 - Define stop/review level for metric breach or price hitting bear zone.
 - Rank expected return per unit downside against two alternative investments.
 - Close with three positive and three negative "change-my-mind triggers."

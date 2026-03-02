@@ -137,7 +137,10 @@ Before saving the final memo, run all 5 checks below:
 
 #### Check 1: Structural Completeness
 
-Verify all required components exist: Executive Summary (Rating, Fair Value Range, E[TR], Buy/Trim Zones, Catalysts, Change Triggers), Rating & Target Price, Investment Thesis & Variant View, Quality Scorecard (5 dimensions + total), Decision Rules (4 gates), Entry Readiness Assessment, Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum).
+Verify all required components exist: Executive Summary (Rating Box, Entry Guidance, E[TR], Catalysts, Change Triggers), Rating & Target Price, Investment Thesis & Variant View, Quality Scorecard (5 dimensions + total), Decision Rules (4 gates), Entry Readiness Assessment, Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum).
+
+- **Minimum table count**: Report must contain at least 12 tables (Financial Summary, Peer Comparison, and DCF Sensitivity are mandatory).
+- **Assumption documentation**: Appendix key assumptions narrative must be at least 1,000 words.
 
 **If any component is missing**: Draft it before proceeding.
 
@@ -164,6 +167,10 @@ Cross-check key numbers across sections:
 - Dates: No "recently" or "last quarter" — exact dates only
 - Calculations shown: Key estimates have visible math
 - Acronyms: Expanded on first use
+- **Source attribution**: Every table must have a `Source:` line at the bottom
+- **A/E notation**: All year data uses FYxxxxA / FYxxxxE format
+- **Bullet format**: Each section's core analysis uses ■ bullet format
+- **Notation consistency**: Multiples use Xx format, currency uses $XXB/$XXM format
 
 #### Check 4: Coverage Quality
 
