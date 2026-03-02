@@ -76,22 +76,36 @@ This produces:
 
 **CRITICAL**: The Data Contract is the single source of truth for ALL quantitative data in the memo. All section-writers MUST reference `Research/{ticker}/data_contract.md` for financial numbers. No section may re-derive, estimate, or override Data Contract figures.
 
-### Phase 2 — Batch 1: Skeleton Sections
+### Phase 2 — Batch 1: Financial Foundation
 
 Read `references/investment_memo.md` (skill-local) with all parameters substituted.
 
 **Before writing any section**, read `Research/{ticker}/data_contract.md` and use it as the authoritative source for all financial figures.
 
-Write the following critical sections first (300-600 words each):
+Write the following sections first (300-600 words each):
 
-1. **§1 Thesis Framework** — Investment thesis, pillars, variant view, "why now"
-2. **§2 Market Structure & Size** — TAM/SAM, growth drivers, penetration
-3. **§12 Financial Condition** — Revenue, margins, Rule of 40, FCF, leading indicators
-4. **§13 Capital Structure** — Debt, leverage, WACC, liquidity
-5. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md`
+1. **§2 Market Structure & Size** — TAM/SAM, growth drivers, penetration
+2. **§12 Financial Condition** — Revenue, margins, Rule of 40, FCF, leading indicators
+3. **§13 Capital Structure** — Debt, leverage, WACC, liquidity
+
+Purpose: Establish financial foundation with quantitative data before any narrative.
+
+### Phase 2b — Valuation (INDEPENDENT — before thesis)
+
+**CRITICAL — Valuation Independence Rule**: §20 must be written BEFORE §1 (Thesis) and §21 (Scenarios). This prevents narrative anchoring from biasing the valuation. The DCF and comps should produce a fair value range based purely on financial data and market structure — the thesis is then constructed around (and constrained by) the valuation output.
+
+4. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md`
+
+### Phase 2c — Thesis & Scenarios (informed by valuation)
+
+Now write thesis and scenarios, constrained by the valuation output from Phase 2b:
+
+5. **§1 Thesis Framework** — Investment thesis, pillars, variant view, "why now"
 6. **§21 Scenarios & Catalysts** — Bear/base/bull scenarios, E[TR], catalysts, monitoring
 
-Purpose: Establish thesis, financial foundation, and valuation anchors.
+**Cross-check**: If §1 thesis implies a fair value that diverges >20% from §20's DCF output, you MUST reconcile. Either adjust the thesis narrative or explain why the DCF is structurally conservative/aggressive.
+
+Purpose: Ensure thesis is data-driven, not narrative-driven.
 
 ### Phase 3 — Batch 2: Remaining Sections
 
@@ -133,7 +147,7 @@ Purpose: Complete company-level deep analysis.
 
 **This phase is MANDATORY — do NOT skip it regardless of context window constraints.**
 
-Before saving the final memo, run all 5 checks below:
+Before saving the final memo, run all 6 checks below:
 
 #### Check 1: Structural Completeness
 
@@ -192,12 +206,24 @@ Review the Coverage Log and Validator from data-fetch:
 
 **If bull bias detected**: Add a "Devil's Advocate" paragraph in the Executive Summary.
 
+#### Check 6: Cross-Report Consistency (if applicable)
+
+Search `Research/{ticker}/` for any prior memos or quick-checks within the last 30 days.
+
+If found:
+- Compare fair value mid: if delta > 20%, MUST add a "Valuation Delta" callout in the Executive Summary explaining what changed
+- Compare WACC, beta, terminal growth assumptions: any change must have an explicit justification tied to new data (not just "different methodology")
+- Compare rating: if rating changed (e.g., Hold → Buy), state the specific new evidence that triggered the change
+- If no fundamental change occurred (no new earnings, no guidance update, no macro shift), flag that the valuation delta may reflect modeling assumption drift rather than genuine re-rating
+
+**If delta > 20% with no new data**: This is a FAIL. Reconcile the assumptions before finalizing.
+
 #### Result Handling
 
 - **PASS** → Proceed to output
 - **PASS WITH NOTES** → Append notes, proceed to output
-- **FAIL** → Fix flagged issues and re-run all 5 checks
-- **Context window low** → Run Check 1 + Check 2 only, append note that full validation was not completed
+- **FAIL** → Fix flagged issues and re-run all 6 checks
+- **Context window low** → Run Check 1 + Check 2 + Check 6 only, append note that full validation was not completed
 
 ---
 

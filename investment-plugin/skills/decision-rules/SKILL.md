@@ -93,6 +93,15 @@ MOS must be ≥ **{MOS_%}** (default: 25%).
 Skew = E[TR] / |Bear Case Total Return|
 ```
 
+### Bear Case Construction Rules
+
+The bear case price must reflect a plausible downside scenario, NOT a mild pullback:
+
+1. **Minimum drawdown floor**: For stocks with beta ≥ 1.0, the bear case must imply at least **-20% total return** from entry price. A bear case of -5% is not a bear case — it's noise.
+2. **Historical anchor**: Reference the stock's or sector's actual historical drawdown in the most recent cycle. For cyclical stocks, the bear case should reflect a realistic cyclical trough (e.g., through-cycle trough P/E × trough EPS).
+3. **Independence from base case**: The bear case must be constructed INDEPENDENTLY from the base/bull cases. Do not derive it as "base case minus a little" — model the bear scenario from its own fundamental assumptions (revenue decline, margin compression, multiple contraction).
+4. **Stress test**: If the stock has experienced a >50% drawdown in the past 5 years, the bear case must acknowledge this and explain why a similar drawdown is or is not plausible.
+
 ### Threshold
 
 Skew must be ≥ **{SKEW_X}** (default: 1.7×).
