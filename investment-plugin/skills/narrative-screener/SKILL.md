@@ -382,10 +382,48 @@ Call `skills/valuation/SKILL.md` with data from the data contract.
 
 Output: `candidates/{TICKER}/valuation.md`
 
+#### 4.1c½: Mini-Scenario Construction
+
+Construct bear/base/bull scenarios from valuation output + narrative context. This bridges the gap between valuation (which outputs a fair value range) and decision-rules (which requires scenario probabilities, returns, and catalysts).
+
+**Return Derivation** (mechanical — from valuation output):
+
+```
+Bull Return = (Fair Value High / Current Price) - 1
+Base Return = (Fair Value Mid / Current Price) - 1
+Bear Return = (Fair Value Low / Current Price) - 1
+```
+
+**Bear Case Floor** (from decision-rules guardrails):
+- If beta ≥ 1.0 AND Bear Return > -20%: override Bear Return = -20%, adjust Fair Value Low = Current Price × 0.80
+- Bear thesis = Phase 1 Counter-Narrative (already constructed)
+
+**Probability Assignment** (based on Phase 1 Theme Lifecycle Stage):
+
+| Lifecycle Stage | P(Bear) | P(Base) | P(Bull) |
+|----------------|---------|---------|---------|
+| Nascent | 30% | 40% | 30% |
+| Growth | 20% | 45% | 35% |
+| Mature | 25% | 50% | 25% |
+| Crowded | 35% | 45% | 20% |
+
+**E[TR] Calculation**:
+```
+E[TR] = P(Bull) × Bull Return + P(Base) × Base Return + P(Bear) × Bear Return
+```
+
+**Catalyst Extraction**:
+1. Primary: next earnings date from data contract (Earning Dates fields)
+2. Secondary: first dated event from Phase 1 Time Horizon → Short-term section
+3. Each catalyst must state: specific date, expected impact (quantified), mechanism
+
+Output: scenario parameters passed directly to Step 4.1d (not a separate file).
+
 #### 4.1d: Decision Rules
 
 Call `skills/decision-rules/SKILL.md` with:
-- Valuation outputs from 4.1c
+- Valuation outputs from 4.1c (Fair Value Range, Buy/Trim Zones)
+- Scenario parameters from 4.1c½ (Bear/Base/Bull returns, probabilities, E[TR], catalysts)
 - Quality Score from 4.1b
 - Thresholds from `references/markets/us.md`
 
