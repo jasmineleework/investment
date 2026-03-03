@@ -63,11 +63,36 @@ All valuation outputs carry forward to Steps 3-5.
 
 ### Step 3: Scenario Analysis
 
-Build three scenarios for 12-24 month outlook, anchoring target prices to the Fair Value Range from Step 2:
-- **Bull**: best realistic case — target near Fair Value High, assign probability, total return
-- **Base**: most likely outcome — target near Fair Value Mid, assign probability, total return
-- **Bear**: downside case — target near or below Fair Value Low, assign probability, total return
-- Calculate **E[TR]** (probability-weighted expected total return)
+Build three scenarios for 12-24 month outlook, anchoring target prices to the Fair Value Range from Step 2.
+
+**Return Derivation** (mechanical — from valuation output):
+```
+Bull Return = (Fair Value High / Current Price) - 1
+Base Return = (Fair Value Mid / Current Price) - 1
+Bear Return = (Fair Value Low / Current Price) - 1
+```
+
+**Bear Case Floor** (per decision-rules guardrails):
+- If beta ≥ 1.0 AND Bear Return > -20%: override Bear Return = -20%, and set Bear Target Price = Current Price × 0.80
+- Bear case must be constructed independently (not "base minus a bit")
+
+**Probability Assignment** (default, adjust with evidence):
+
+| Signal | P(Bear) | P(Base) | P(Bull) |
+|--------|---------|---------|---------|
+| Consensus bullish (>70% Buy) | 20% | 45% | 35% |
+| Mixed signals | 25% | 50% | 25% |
+| Consensus cautious (<40% Buy) | 35% | 45% | 20% |
+
+**E[TR] Calculation**:
+```
+E[TR] = P(Bull) × Bull Return + P(Base) × Base Return + P(Bear) × Bear Return
+```
+
+**Catalyst Extraction**:
+1. Next earnings date from data contract (Earning Dates)
+2. Nearest dated event from WebSearch context
+3. Each catalyst: specific date, expected impact (quantified), mechanism
 
 ### Step 4: Thesis Construction
 

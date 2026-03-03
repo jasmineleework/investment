@@ -13,10 +13,11 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 
 ## Inputs
 
-- Financial data from data-fetch (quote, financials, cash flow)
-- Peer list from §5 Competitive Landscape analysis
+- Financial data from Data Contract (`Research/{ticker}/data_contract.md`)
+- Peer list (optional — provided by caller, or constructed internally if not provided):
+  - If caller provides a peer list: use it directly
+  - If not: select 5-8 peers using Data Contract sector/industry + WebSearch
 - Market config from `references/markets/{market}.md`
-- Thresholds from `references/markets/{market}.md`
 
 ## Output
 
@@ -85,11 +86,19 @@ Cost of Equity = Risk-Free Rate + Beta × Equity Risk Premium
 WACC = (E/V) × Cost of Equity + (D/V) × Cost of Debt × (1 - Tax Rate)
 ```
 
-Default inputs (US market):
-- Risk-free rate: 10Y Treasury yield (from data-fetch macro data)
-- Equity risk premium: 5.5%
-- Beta: from Yahoo Finance quote data
-- Tax rate: effective tax rate from financials
+Default inputs (from Data Contract → WACC Inputs section):
+- Risk-free rate: Data Contract "Risk-Free Rate" field
+- Beta: Data Contract "Beta (Raw)" field (WACC guardrail: raw beta only in base case)
+- Equity risk premium: Data Contract "Equity Risk Premium" field (default 5.5%)
+- Tax rate: Data Contract "Effective Tax Rate" field
+- Cost of debt: Data Contract "Pre-Tax Cost of Debt" field
+- Debt ratio: derived from Data Contract Balance Sheet (Total Debt / (Total Debt + Market Cap))
+
+**WACC Guardrails** (mandatory):
+1. **Raw beta only**: Base case WACC must use the raw beta from the data source (Yahoo Finance). Subjective beta adjustments (e.g., "AI reduces cyclicality") are NOT permitted in the base case.
+2. **Adjusted-beta scenario**: If you believe raw beta overstates/understates risk, you may add ONE row to the sensitivity table with adjusted beta and a written justification — but this is a scenario, not the base case.
+3. **Terminal growth cap**: Terminal growth rate must be ≤ 3.0% for the base case. Rates above 3.0% require explicit structural evidence (e.g., industry growing at 2× GDP for 20+ years) and may only appear in the bull scenario.
+4. **Single model rule**: Produce ONE DCF model with one set of assumptions. Do NOT run a second DCF with different parameters because the first result "seems too low/high". If the DCF fair value diverges significantly from market price, that IS the finding — state it as such. The purpose of DCF is to find YOUR intrinsic value independent of market price, not to reverse-engineer a number that matches the market.
 
 ### Step 2: Project Free Cash Flow (5 years)
 

@@ -76,22 +76,41 @@ This produces:
 
 **CRITICAL**: The Data Contract is the single source of truth for ALL quantitative data in the memo. All section-writers MUST reference `Research/{ticker}/data_contract.md` for financial numbers. No section may re-derive, estimate, or override Data Contract figures.
 
-### Phase 2 — Batch 1: Skeleton Sections
+### Phase 2 — Batch 1: Financial Foundation
 
 Read `references/investment_memo.md` (skill-local) with all parameters substituted.
 
 **Before writing any section**, read `Research/{ticker}/data_contract.md` and use it as the authoritative source for all financial figures.
 
-Write the following critical sections first (300-600 words each):
+Write the following sections first (300-600 words each):
 
-1. **§1 Thesis Framework** — Investment thesis, pillars, variant view, "why now"
-2. **§2 Market Structure & Size** — TAM/SAM, growth drivers, penetration
-3. **§12 Financial Condition** — Revenue, margins, Rule of 40, FCF, leading indicators
-4. **§13 Capital Structure** — Debt, leverage, WACC, liquidity
-5. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md`
-6. **§21 Scenarios & Catalysts** — Bear/base/bull scenarios, E[TR], catalysts, monitoring
+1. **§2 Market Structure & Size** — TAM/SAM, growth drivers, penetration
+2. **§12 Financial Condition** — Revenue, margins, Rule of 40, FCF, leading indicators
+3. **§13 Capital Structure** — Debt, leverage, WACC, liquidity
 
-Purpose: Establish thesis, financial foundation, and valuation anchors.
+Purpose: Establish financial foundation with quantitative data before any narrative.
+
+### Phase 2b — Valuation (INDEPENDENT — before thesis)
+
+**CRITICAL — Valuation Independence Rule**: §20 must be written BEFORE §1 (Thesis) and §21 (Scenarios). This prevents narrative anchoring from biasing the valuation. The DCF and comps should produce a fair value range based purely on financial data and market structure — the thesis is then constructed around (and constrained by) the valuation output.
+
+**Preliminary Peer Selection**: Before calling valuation, identify 5-8 comparable companies using Data Contract sector/industry fields + WebSearch. This peer list will be reused in §5 (Phase 3) — do NOT rebuild from scratch. Pass it to the valuation skill.
+
+4. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md` with:
+   - Financial data from `Research/{ticker}/data_contract.md`
+   - Preliminary peer list (constructed above)
+   - Market config from `references/markets/us.md`
+
+### Phase 2c — Thesis & Scenarios (informed by valuation)
+
+Now write thesis and scenarios, constrained by the valuation output from Phase 2b:
+
+5. **§1 Thesis Framework** — Investment thesis, pillars, variant view, "why now"
+6. **§21 Scenarios & Catalysts** — Bear/base/bull scenarios, E[TR], catalysts, monitoring. Bear case must comply with decision-rules Bear Case Construction Rules (minimum -20% return for beta ≥ 1.0 stocks).
+
+**Cross-check**: If §1 thesis implies a fair value that diverges >20% from §20's DCF output, you MUST reconcile. Either adjust the thesis narrative or explain why the DCF is structurally conservative/aggressive.
+
+Purpose: Ensure thesis is data-driven, not narrative-driven.
 
 ### Phase 3 — Batch 2: Remaining Sections
 
@@ -119,25 +138,29 @@ Purpose: Complete company-level deep analysis.
 
 ### Phase 4 — Batch 3: Rating & Assembly
 
-1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md`
-2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md`
-3. **Entry Readiness Assessment** — Based on decision-rules output
-4. **Executive Summary** — Write LAST, based on all prior analysis:
-   - Rating, Fair Value Range, Expected Total Return
-   - Buy/Trim Zones, Dated Catalysts
-   - What Would Change This Rating
-5. **Coverage Log + Coverage Validator** — From data-fetch output
-6. **Appendix** — Models, data tables, key assumptions
+1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md` with:
+   - Analysis content from all 21 sections (§1-§21)
+   - Financial data from `Research/{ticker}/data_contract.md`
+
+2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md` with:
+   - Valuation outputs from §20 (Fair Value Range, Buy/Trim Zones)
+   - Scenario parameters from §21 (Bear/Base/Bull per-scenario returns, probabilities, E[TR], catalysts)
+   - Quality Score from quality-scorecard
+   - Thresholds from `references/markets/us.md`
+   Output feeds into Executive Summary Gate table, NOT a standalone section.
+3. **Executive Summary** — Write LAST, based on all prior analysis. This is the ONLY place for rating, gate decisions, and entry zones — see `references/investment_memo.md` Executive Summary Template.
+4. **Coverage Log + Coverage Validator** — From data-fetch output
+5. **Appendix** — Models, data tables, key assumptions
 
 ### Phase 5 — Output Validation (MANDATORY)
 
 **This phase is MANDATORY — do NOT skip it regardless of context window constraints.**
 
-Before saving the final memo, run all 5 checks below:
+Before saving the final memo, run all 6 checks below:
 
 #### Check 1: Structural Completeness
 
-Verify all required components exist: Executive Summary (Rating Box, Entry Guidance, E[TR], Catalysts, Change Triggers), Rating & Target Price, Investment Thesis & Variant View, Quality Scorecard (5 dimensions + total), Decision Rules (4 gates), Entry Readiness Assessment, Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum).
+Verify all required components exist: Executive Summary (Rating Box with Gate table, Entry Zones, Thesis, Risks, Catalysts, Change Triggers), Quality Scorecard (5 dimensions + total), Sections 1-21 (§17 may be N/A if no hardware), Coverage Log, Coverage Validator, Appendix (DCF model + sensitivity table minimum). Note: Rating & Target Price, Decision Rules, and Entry Readiness Assessment are part of the Executive Summary — do NOT check for them as standalone sections.
 
 - **Minimum table count**: Report must contain at least 12 tables (Financial Summary, Peer Comparison, and DCF Sensitivity are mandatory).
 - **Assumption documentation**: Appendix key assumptions narrative must be at least 1,000 words.
@@ -192,12 +215,24 @@ Review the Coverage Log and Validator from data-fetch:
 
 **If bull bias detected**: Add a "Devil's Advocate" paragraph in the Executive Summary.
 
+#### Check 6: Cross-Report Consistency (if applicable)
+
+Search `Research/{ticker}/` for any prior memos or quick-checks within the last 30 days.
+
+If found:
+- Compare fair value mid: if delta > 20%, MUST add a "Valuation Delta" callout in the Executive Summary explaining what changed
+- Compare WACC, beta, terminal growth assumptions: any change must have an explicit justification tied to new data (not just "different methodology")
+- Compare rating: if rating changed (e.g., Hold → Buy), state the specific new evidence that triggered the change
+- If no fundamental change occurred (no new earnings, no guidance update, no macro shift), flag that the valuation delta may reflect modeling assumption drift rather than genuine re-rating
+
+**If delta > 20% with no new data**: This is a FAIL. Reconcile the assumptions before finalizing.
+
 #### Result Handling
 
 - **PASS** → Proceed to output
 - **PASS WITH NOTES** → Append notes, proceed to output
-- **FAIL** → Fix flagged issues and re-run all 5 checks
-- **Context window low** → Run Check 1 + Check 2 only, append note that full validation was not completed
+- **FAIL** → Fix flagged issues and re-run all 6 checks
+- **Context window low** → Run Check 1 + Check 2 + Check 6 only, append note that full validation was not completed
 
 ---
 
@@ -206,14 +241,14 @@ Review the Coverage Log and Validator from data-fetch:
 ### Output Sequence
 
 ```
-1. Executive Summary
-2. Rating & Target Price
-3. Investment Thesis & Variant View
-4. Decision Rules / Quality Scorecard / Entry Assessment
-5. Sections 1-21
-6. Coverage Log + Coverage Validator
-7. Appendix
+1. Executive Summary (includes Rating Box, Gate table, Entry Zones — all in one place)
+2. Quality Scorecard (standalone — substantive scoring breakdown)
+3. Sections 1-21
+4. Coverage Log + Coverage Validator
+5. Appendix
 ```
+
+**No standalone sections for**: Rating & Target Price, Investment Thesis & Variant View, Decision Rules, Entry Readiness Assessment. These are either in Executive Summary or in their respective §sections.
 
 ### File Output
 
