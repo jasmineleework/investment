@@ -13,9 +13,9 @@ Apply 4 mandatory entry gates to determine the investment rating. This is the si
 
 ## Inputs
 
-- **From valuation skill**: Fair Value Range (Low/Mid/High), Buy/Trim Zones, E[TR] by scenario
+- **From valuation skill**: Fair Value Range (Low/Mid/High), Buy/Trim Zones
+- **From scenario analysis (§21 or equivalent)**: Bear/Base/Bull per-scenario returns, probabilities, E[TR], catalysts with dates
 - **From quality-scorecard skill**: Composite Quality Score (0-100)
-- **From stock-research §21**: Bear/Base/Bull scenarios with probabilities, catalysts with dates
 - **Thresholds from** `references/markets/{market}.md`
 
 ## Output

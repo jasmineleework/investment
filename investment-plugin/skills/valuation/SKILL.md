@@ -13,10 +13,11 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 
 ## Inputs
 
-- Financial data from data-fetch (quote, financials, cash flow)
-- Peer list from §5 Competitive Landscape analysis
+- Financial data from Data Contract (`Research/{ticker}/data_contract.md`)
+- Peer list (optional — provided by caller, or constructed internally if not provided):
+  - If caller provides a peer list: use it directly
+  - If not: select 5-8 peers using Data Contract sector/industry + WebSearch
 - Market config from `references/markets/{market}.md`
-- Thresholds from `references/markets/{market}.md`
 
 ## Output
 
@@ -85,11 +86,13 @@ Cost of Equity = Risk-Free Rate + Beta × Equity Risk Premium
 WACC = (E/V) × Cost of Equity + (D/V) × Cost of Debt × (1 - Tax Rate)
 ```
 
-Default inputs (US market):
-- Risk-free rate: 10Y Treasury yield (from data-fetch macro data)
-- Equity risk premium: 5.5%
-- Beta: from Yahoo Finance quote data
-- Tax rate: effective tax rate from financials
+Default inputs (from Data Contract → WACC Inputs section):
+- Risk-free rate: Data Contract "Risk-Free Rate" field
+- Beta: Data Contract "Beta (Raw)" field (WACC guardrail: raw beta only in base case)
+- Equity risk premium: Data Contract "Equity Risk Premium" field (default 5.5%)
+- Tax rate: Data Contract "Effective Tax Rate" field
+- Cost of debt: Data Contract "Pre-Tax Cost of Debt" field
+- Debt ratio: derived from Data Contract Balance Sheet (Total Debt / (Total Debt + Market Cap))
 
 **WACC Guardrails** (mandatory):
 1. **Raw beta only**: Base case WACC must use the raw beta from the data source (Yahoo Finance). Subjective beta adjustments (e.g., "AI reduces cyclicality") are NOT permitted in the base case.

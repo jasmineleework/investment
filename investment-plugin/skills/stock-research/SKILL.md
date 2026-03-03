@@ -94,14 +94,19 @@ Purpose: Establish financial foundation with quantitative data before any narrat
 
 **CRITICAL — Valuation Independence Rule**: §20 must be written BEFORE §1 (Thesis) and §21 (Scenarios). This prevents narrative anchoring from biasing the valuation. The DCF and comps should produce a fair value range based purely on financial data and market structure — the thesis is then constructed around (and constrained by) the valuation output.
 
-4. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md`
+**Preliminary Peer Selection**: Before calling valuation, identify 5-8 comparable companies using Data Contract sector/industry fields + WebSearch. This peer list will be reused in §5 (Phase 3) — do NOT rebuild from scratch. Pass it to the valuation skill.
+
+4. **§20 Valuation Framework** — Read and execute `skills/valuation/SKILL.md` with:
+   - Financial data from `Research/{ticker}/data_contract.md`
+   - Preliminary peer list (constructed above)
+   - Market config from `references/markets/us.md`
 
 ### Phase 2c — Thesis & Scenarios (informed by valuation)
 
 Now write thesis and scenarios, constrained by the valuation output from Phase 2b:
 
 5. **§1 Thesis Framework** — Investment thesis, pillars, variant view, "why now"
-6. **§21 Scenarios & Catalysts** — Bear/base/bull scenarios, E[TR], catalysts, monitoring
+6. **§21 Scenarios & Catalysts** — Bear/base/bull scenarios, E[TR], catalysts, monitoring. Bear case must comply with decision-rules Bear Case Construction Rules (minimum -20% return for beta ≥ 1.0 stocks).
 
 **Cross-check**: If §1 thesis implies a fair value that diverges >20% from §20's DCF output, you MUST reconcile. Either adjust the thesis narrative or explain why the DCF is structurally conservative/aggressive.
 
@@ -133,8 +138,16 @@ Purpose: Complete company-level deep analysis.
 
 ### Phase 4 — Batch 3: Rating & Assembly
 
-1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md`
-2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md` (output feeds into Executive Summary Gate table, NOT a standalone section)
+1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md` with:
+   - Analysis content from all 21 sections (§1-§21)
+   - Financial data from `Research/{ticker}/data_contract.md`
+
+2. **Decision Rules** — Read and execute `skills/decision-rules/SKILL.md` with:
+   - Valuation outputs from §20 (Fair Value Range, Buy/Trim Zones)
+   - Scenario parameters from §21 (Bear/Base/Bull per-scenario returns, probabilities, E[TR], catalysts)
+   - Quality Score from quality-scorecard
+   - Thresholds from `references/markets/us.md`
+   Output feeds into Executive Summary Gate table, NOT a standalone section.
 3. **Executive Summary** — Write LAST, based on all prior analysis. This is the ONLY place for rating, gate decisions, and entry zones — see `references/investment_memo.md` Executive Summary Template.
 4. **Coverage Log + Coverage Validator** — From data-fetch output
 5. **Appendix** — Models, data tables, key assumptions
