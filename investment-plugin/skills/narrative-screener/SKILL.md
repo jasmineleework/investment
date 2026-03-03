@@ -453,91 +453,168 @@ WebSearch: "{ticker} hedge fund positions top holders {current_year}"
 
 Output: `candidates/{TICKER}/smart_money.md`
 
-### Step 4.2: Compile Final Report
+### Step 4.2: 52-Week Range Data
+
+Before compiling the report, fetch 52-week price range for each shortlisted candidate:
+
+```
+get_historical_stock_prices(symbol="{ticker}", period="1y")
+```
+
+Extract the highest and lowest closing prices from the returned data. These populate the "52 周区间" row in each candidate's Key Metric Card.
+
+### Step 4.3: Compile Final Report
 
 After all candidates are evaluated, compile `screening-report.md`.
+
+#### Terminology Rules
+
+The final report is an **investor-facing document**. The following internal screening terms **MUST NOT** appear anywhere in the report body (Sections 一 through 四):
+
+| Banned Term | Replacement |
+|-------------|-------------|
+| MOS / MOS% | 估值折扣 |
+| E[TR] | 预期三年回报 |
+| Decision Gates / 4/4 / 3/4 | 通过全部估值纪律检验 / 部分通过 |
+| NarrFit / NarrativeFit | 与主题关联度 |
+| FundQuick / FundamentalQuick | 基本面评分 |
+| ValDiscount | 估值折扣评分 |
+| Gap Index / ★☆ star ratings | （删除，不使用） |
+| Skew | （删除，不使用） |
+| Phase 1 / 2 / 3 / 4 | （删除，不使用） |
+
+Appendix B may retain original scoring terms for technical reference.
+
+#### Elimination Reason Rewriting Rules
+
+When listing eliminated candidates in Appendix C, rewrite internal codes to natural language:
+- "NarrativeFit < 60" → "与主题关联度不足 — {具体解释}"
+- "FundamentalQuick < 40" → "基本面偏弱 — {具体指标}"
+- "ValuationDiscount < 30" → "估值已充分反映 — {具体估值水平}"
+- "Red Flag" → "管理层异常交易 — {具体描述}"
 
 #### Report Structure
 
 ```markdown
-# Narrative Screening Report: {narrative}
-**Date**: {date} | **Theme Lifecycle**: {stage} | **Pool**: {N} → **Shortlisted**: {M}
+# {narrative} — 投资筛选报告
+**评估日期**: {date}
 
 ---
 
-## Narrative Map
-[Include Phase 1 narrative decomposition from narrative-map.md]
+## 一、投资叙事概览
+
+**主题**: {narrative}
+**阶段**: {lifecycle_stage} | **评估日期**: {date}
+
+### 核心驱动力
+- **{Driver 1 标题}**: 1-2 句描述 + 关键数据
+- **{Driver 2 标题}**: 1-2 句描述 + 关键数据
+- **{Driver 3 标题}** (如有)
+
+### 受益链条
+- **直接受益**: {设备/服务类型} — {公司示例}
+- **间接受益**: {基础设施/配套类型} — {公司示例}
+- **衍生受益**: {运营/材料类型} — {公司示例}
+
+### 需要关注的反面信号
+- {Counter-narrative 1}
+- {Counter-narrative 2}
 
 ---
 
-## Valuation Gap Ranking
+## 二、筛选结论与关键发现
 
-| Rank | Ticker | Company | Quality | MOS% | 4-Gate | Smart Money | Rating | Gap Index |
-|------|--------|---------|---------|------|--------|-------------|--------|-----------|
-| 1 | XXX | ... | 78/100 | 32% | 4/4 | 82/100 | **Buy** | {stars} |
-| 2 | YYY | ... | 71/100 | 28% | 3/4 | 75/100 | **Hold** | {stars} |
+| Rank | Ticker | Company | 评级 | 质量评分 | 当前价 | 目标价 | 估值折扣 | 预期三年回报 |
+|------|--------|---------|------|---------|--------|--------|---------|------------|
+| 1 | XXX | ... | **Buy** | 78/100 | $268 | $345 | 28% | 35% |
+| 2 | YYY | ... | **Hold** | 72/100 | $180 | $210 | 15% | 22% |
 
-**Gap Index** = Weighted composite: MOS% (highest weight) + Quality + Smart Money confirmation
+### 关键发现
 
-Gap Index star rating:
-- 5 stars: MOS ≥ 30% + Quality ≥ 75 + SmartMoney ≥ 75 + 4/4 Gates
-- 4 stars: MOS ≥ 25% + Quality ≥ 70 + SmartMoney ≥ 65
-- 3 stars: MOS ≥ 20% + Quality ≥ 65 + SmartMoney ≥ 55
-- 2 stars: MOS ≥ 15% + Quality ≥ 60
-- 1 star: MOS < 15% or Quality < 60
+- {自然语言描述的发现，不引用内部评分术语}
+- 通过全部估值纪律检验的标的：{list}
+- 被淘汰标的的共同特征：{summary}
 
 ---
 
-## Shortlisted Candidates
+## 三、精选标的详评
 
-### #1 {TICKER} — {Company Name} {gap_badge}
+### {TICKER} — {Company Name} | {Rating}
 
-**Narrative Benefit Path**:
-{narrative} → [specific transmission mechanism] → {X}% revenue directly benefits
+| | |
+|---|---|
+| **市值** | ~${X}B |
+| **当前价格** | ${current_price} |
+| **目标价格** | ${target_price}（{FV Low}—{FV High}） |
+| **52 周区间** | ${52w_low} — ${52w_high} |
+| **质量评分** | {quality_score} / 100 |
 
-**Quick-Check Results**:
+### Investment Thesis
 
-| Gate | Metric | Value | Threshold | Result |
-|------|--------|-------|-----------|--------|
-| 1. Expected Return | E[TR] | XX% | ≥ 30% | pass/fail |
-| 2. Margin of Safety | MOS | XX% | ≥ 25% | pass/fail |
-| 3. Skew | E[TR]/|Bear| | X.X× | ≥ 1.7× | pass/fail |
-| 4. Catalyst | {name} | {date} | Within 24mo | pass/fail |
-| Quality | Score | XX/100 | ≥ 70 | pass/fail |
+■ **{Thesis Point 1 — bold topic header}.** 3-5 sentences of supporting
+detail with specific numbers, dates, and evidence.
 
-**Rating: {Buy/Hold/Await/Sell}** | Fair Value: ${XX} | Current: ${XX}
+■ **{Thesis Point 2 — bold topic header}.** 3-5 sentences of supporting
+detail with specific numbers, dates, and evidence.
 
-**Smart Money Signals**:
-- Analyst: {X}% Buy, consensus target ${XX} (upside {X}%)
-- Insider: 90-day activity: {summary}
-- Institutional: {summary}
+■ **{Thesis Point 3 — bold topic header}.** 3-5 sentences of supporting
+detail with specific numbers, dates, and evidence.
 
-**Key Bull Points**: 1-2 items
-**Key Risks**: 1-2 items
-**Next Step**: → `/research {TICKER}` for full deep dive
+### 催化剂
+
+■ **{Catalyst title}.** Description with dates/impact...
+
+■ **{Catalyst title}.** Description...
+
+### 聪明钱动态
+
+■ **{Signal title}.** Description with specifics...
+
+（如无显著信号，注明"无异常动态"）
+
+### 风险提示
+
+■ **{Risk title}.** Description...
+
+■ **{Risk title}.** Description...
+
+### 行动建议
+
+{具体价位建议：买入区间 / 观望 / 减仓区间}
+→ `/research {TICKER}` 获取完整深度研报
 
 ---
 
-[Repeat for each shortlisted candidate]
+[对每只精选标的重复上述格式]
 
 ---
 
-## Eliminated Candidates
+## 四、下一步行动
 
-| Ticker | Company | L-Tier | Elimination Reason |
-|--------|---------|--------|-------------------|
-| AAA | ... | L1 | NarrativeFit 52 — revenue exposure insufficient |
-| BBB | ... | L2 | Red Flag: insider large sale |
-| CCC | ... | L1 | Valuation fully priced-in (P/S 95th pctl) |
+| 优先级 | 标的 | 行动 |
+|--------|------|------|
+| 立即 | {BUY-rated ticker} | `/research {TICKER}` 完整深度研报 |
+| 关注 | {HOLD-rated tickers} | 设价格提醒：{ticker} < ${buy_zone_price} |
+| 定期 | 全部 | 每月检查叙事有效性：{关键指标} |
 
 ---
 
-## Methodology Notes
+## 附录
 
-- **Narrative Fit**: Scored per `narrative-fit-scoring.md` (revenue exposure × 0.35 + transmission certainty × 0.25 + mgmt intent × 0.20 + differentiation × 0.20)
-- **Smart Money**: Scored per `smart-money-signals.md` (analyst × 0.30 + insider × 0.40 + institutional × 0.30)
-- **Quality/Valuation/Decision**: Standard skill chain (data-fetch → quality-scorecard → valuation → decision-rules)
-- **Thresholds**: Per `references/markets/us.md`
+### 附录 A: 候选池
+
+{从 discovery-pool.md 嵌入完整表格}
+
+### 附录 B: 评分排序
+
+{从 shortlist-ranking.md 嵌入完整表格}
+注：附录中的评分术语保留原始格式，供技术参考。
+
+### 附录 C: 淘汰标的
+
+| Ticker | Company | 淘汰原因 |
+|--------|---------|----------|
+| AAA | ... | {自然语言淘汰原因 — 具体解释} |
 ```
 
 ### Output
