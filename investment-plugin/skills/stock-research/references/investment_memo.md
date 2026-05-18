@@ -259,6 +259,10 @@ Source: All peer data from yfinance MCP / SEC EDGAR MCP on {today's date}. Every
 
 **Mandatory `Source` and `Pull Date` columns**: every peer row (target + comparables) must include the data origin and the date pulled. `Pull Date` must equal the research day (today). Rows with stale dates, estimation phrasing (`~`, `约`, `approximately`), or missing source are invalid and must be re-fetched before the report is finalized.
 
+**Source-of-truth model**: Template B is a FILTERED VIEW of the Data Contract `## Peer Data` section. The Contract may contain more rows than Template B if §5b or §20a excluded any peer as an outlier — excluded peers must be documented with reason in the relevant "Outlier Exclusions" subsection. **Never remove rows from the Data Contract.** The Contract is append-only and retains every fetched peer as audit record; Template B (the report-level table) reflects only the peers actually used in the analysis.
+
+**Workflow integration**: Template B in §5 (Competitive Landscape) and §20a (Comps) both reference the same `## Peer Data` section of the Data Contract. The section is filled by `data-fetch(mode=supplement)` after §5a Competitor Identification produces the peer set. Subsequent supplement calls during §6-§19 or §20 may append more peer rows on demand. Template B should always reflect the current set of in-use peers (with excluded ones documented separately).
+
 ### Template C: DCF Sensitivity
 
 Used in §20 Valuation Framework and Appendix.
@@ -277,6 +281,14 @@ Source: DCF model. Highlighted cell = base case.
 ---
 
 ## Sections 1–21 Writing Requirements
+
+**Section writing order** (enforced by `stock-research` SKILL Steps 4–6):
+
+1. **Step 4 — Analytical sections in numerical order**: §2 → §3 → §4 → §5a (Competitor Identification only) → **[data-fetch supplement: append `## Peer Data` to Contract]** → §5b (Competitive Dynamics + Template B filled from Contract) → §6 → §7 → §8 → §9 → §10 → §11 → §12 → §13 → §14 → §15 → §16 → §17 → §18 → §19.
+2. **Step 5 — §20 Valuation**: written AFTER all 18 analytical sections, so DCF/Comps/Reverse DCF assumptions rest on full business understanding rather than financial snapshots alone.
+3. **Step 6 — §1 Thesis + §21 Scenarios**: written LAST. They synthesize the entire memo including §20's fair value range. This preserves the Valuation Independence Rule — §20 cannot be retuned to fit a pre-formed thesis.
+
+The final memo file output order is the natural numerical order (§1, §2, ..., §21), but the writing order above ensures dependencies flow correctly: analysis → valuation → narrative.
 
 ### Section 1: Thesis Framework
 *Purpose — Define conditions that must hold for value creation*

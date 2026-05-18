@@ -9,8 +9,12 @@
 1. **Every numeric field must cite its source** (SEC EDGAR MCP, Yahoo Finance MCP, yahoo_fetch.py, fred_fetch.py, specific WebSearch result).
 2. **Source priority for conflicts**: SEC EDGAR MCP > Yahoo Finance MCP > Python scripts (yahoo_fetch.py / sec_edgar_fetch.py) > WebSearch.
 3. **Leave fields blank rather than guessing** — blank fields signal to downstream writers that data is unavailable.
-4. **The Data Contract is immutable during a single research run** — once generated, all sections reference it; no section may override these numbers.
-5. **Cross-phase back-fill exception**: `Target Price vs Fair Value Mid (%)` in Analyst Consensus is the only field that may be populated after initial generation — it requires Phase 4 (valuation) output. All other fields must be populated at generation time or left blank.
+4. **The Data Contract is append-only during a single research run** — no skill may modify or delete existing rows. Skills may APPEND new rows (e.g., supplemental peer rows) but never overwrite. The report (memo) is a filtered view of the Contract: it may exclude individual peer rows via "Outlier Exclusions" subsections, but the Contract retains every fetched row as audit record.
+5. **Append exceptions** (the only sources of new content after initial generation):
+   - **Phase 4 back-fill**: `Target Price vs Fair Value Mid (%)` in Analyst Consensus is populated after valuation completes — it requires Phase 4 output.
+   - **Peer Data supplement**: the `## Peer Data` section is filled by `data-fetch(mode=supplement, peer_set=[...])`, called from stock-research Step 4.5 after §5a Competitor Identification. Additional supplement calls during §6-§19 or §20 may append more peer rows on demand.
+   - **Research Supplement**: the `## Research Supplement` section accepts on-demand WebSearch findings from `data-fetch(mode=supplement, topics=[...])`. Any §X writer (§3, §11, §15, §17, §18, etc.) may trigger this when their section needs additional qualitative material beyond the initial Coverage Log. Entries accumulate; they are never deleted.
+   - Outside these three exceptions, all fields must be populated at initial generation time or left blank.
 
 ---
 
@@ -139,9 +143,24 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 | Equity Weight | % | |
 | WACC | % | calculated |
 
-## Peer Data（MANDATORY — all rows pulled on research day; no historical reuse)
+## Peer Data（MANDATORY — append-only; all rows pulled on research day; no historical reuse）
 
-Pull every peer in the peer set via the same data-fetch path as the target ticker (MCP first, scripts as fallback). **Pull Date for every row must equal the research day**; if any row's Pull Date ≠ today, re-pull before proceeding to §20a Comps.
+**Filled by `data-fetch(mode=supplement)`, NOT at initial generation.**
+stock-research invokes the supplement call from Step 4.5 (after §5a
+Competitor Identification produces the peer set). Subsequent supplement
+calls during §6-§19 or §20 may append additional peer rows on demand.
+
+**Append-only**: rows added by supplement calls stay forever — they are
+not deleted even if subsequent analysis judges the peer non-comparable.
+The report (§20a Comps, §5b Template B) is a filtered view: excluded
+peers are documented in "Outlier Exclusions" subsections, but the
+Contract retains the row as audit record.
+
+**Pull Date == research day (today)**: every row in this section must
+have `Pull Date` equal to today. Supplement calls refresh any stale
+rows in-place to maintain this invariant across the whole section. If
+any row's Pull Date ≠ today, validate_data_contract.py reports FAIL —
+trigger a supplement call to refresh.
 
 | Ticker | Price | Shares (M, diluted) | Market Cap ($B) | FY{YYYY}A Revenue ($M) | TTM EBITDA ($M) | Net Income ($M) | Net Debt ($M) | Source | Pull Date (YYYY-MM-DD) |
 |--------|-------|---------------------|-----------------|------------------------|------------------|------------------|---------------|--------|--------------------------|
@@ -153,6 +172,32 @@ Rules:
 - Every numeric cell must be filled or marked `N/A — data source unavailable`; **never use "~", "约", "approximately", or training-memory estimates**
 - `Pull Date` column must equal research day (today). 7-day tolerance windows or snapshot reuse are prohibited
 - If a peer's MCP fetch fails, mark the row `N/A — MCP fetch failed YYYY-MM-DD` and exclude from §20a median calculations
+
+## Research Supplement（append-only; on-demand qualitative WebSearch findings）
+
+**Filled by `data-fetch(mode=supplement, topics=[...])`.** Any analytical section writer (e.g., §15 Data & AI Economics needs specifics on a new chip launch; §17 Supply Chain needs a supplier disclosure; §18 Risk Inventory needs litigation timeline) may invoke a supplement call with a topic list when the initial Coverage Log doesn't have enough material. Entries accumulate across the research run as different sections surface different needs.
+
+**Format**: one block per topic, in chronological order of when the supplement call was made.
+
+### {Topic 1 string} — {YYYY-MM-DD}
+- Triggered by: §X {section name}
+- Query: "{the actual WebSearch query used}"
+- Findings:
+  - {finding 1 with inline source}: [source title](url) ({source date})
+  - {finding 2 with inline source}: [...]
+  - {finding 3 with inline source}: [...]
+
+### {Topic 2 string} — {YYYY-MM-DD}
+- Triggered by: §X {section name}
+- Query: "..."
+- Findings:
+  - ...
+
+Rules:
+- Append-only — never edit or delete a prior block (it's part of the audit trail)
+- Each block must record: topic, date the supplement call was made, triggering §section, the WebSearch query verbatim, and 3-5 findings with source URL + date
+- Findings may be cited in §X prose; cite the Research Supplement block reference (e.g., "see Research Supplement 2026-05-19 #1") in the section text
+- Coverage Log captures the same URLs; Research Supplement adds the context (which section triggered it and why)
 
 ## Data Quality Notes
 - Environment: {claude-code | cowork}

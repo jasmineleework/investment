@@ -62,79 +62,89 @@ Read `references/markets/us.md` (contains both market config and decision thresh
 
 ---
 
-## Step 3: Data Collection
+## Step 3: Data Collection — Target
 
-Read and execute `skills/data-fetch/SKILL.md` with `{ticker}`, `{market}`, and `{mode}` = "full".
+Read and execute `skills/data-fetch/SKILL.md` with `{ticker}`, `{peer_set}` = `[]`, `{market}`, and `{mode}` = "full".
 
-This produces:
-- **Data Contract** — `Research/{ticker}/data_contract.md` (single source of truth for all quantitative data)
+This produces the **Data Contract v1** at `Research/{ticker}/data_contract.md` covering the target only. The `## Peer Data` section is rendered empty at this stage; it will be filled by a `supplement` call from Step 4.5 below.
+
+Also produced:
 - Coverage Log (30+ unique sources)
 - Coverage Validator (pass/fail for each criterion)
 - Key qualitative findings organized by section relevance
 
 **CRITICAL**: The Data Contract is the single source of truth for ALL quantitative data in the memo. All section-writers MUST reference `Research/{ticker}/data_contract.md` for financial numbers. No section may re-derive, estimate, or override Data Contract figures.
 
----
-
-## Step 4: Financial Foundation (§2, §12, §13)
-
-Read `references/investment_memo.md` (skill-local) with all parameters substituted.
-
-**Before writing any section**, read `Research/{ticker}/data_contract.md` and use it as the authoritative source for all financial figures.
-
-Write the following sections first (300-600 words each, except §12 which follows its expanded Key Assumptions Narrative requirements):
-
-1. **§2 Market Structure & Size** — TAM/SAM, growth drivers, penetration
-2. **§12 Financial Condition** — Revenue, margins, Rule of 40, FCF, leading indicators. Must include Key Assumptions Narrative per `investment_memo.md` requirements.
-3. **§13 Capital Structure** — Debt, leverage, WACC, liquidity
-
-Purpose: Establish financial foundation with quantitative data before any narrative.
+The Data Contract is **append-only** within a research run: supplement calls may add `## Peer Data` rows, but no section ever mutates or deletes existing rows. The report (memo) is a filtered view of the Contract — it may exclude individual peer rows via "Outlier Exclusions" subsections, but the Contract retains everything fetched.
 
 ---
 
-## Step 5: Valuation (§20)
+## Step 4: All Analytical Sections (§2–§19)
 
-**CRITICAL — Valuation Independence Rule**: §20 must be written BEFORE §1 (Thesis) and §21 (Scenarios). This prevents narrative anchoring from biasing the valuation. The DCF and comps should produce a fair value range based purely on financial data and market structure — the thesis is then constructed around (and constrained by) the valuation output.
+Write the analytical sections in numerical order. The Data Contract is the source of truth for quantitative data; the Coverage Log + qualitative research from data-fetch is the basis for qualitative analysis.
 
-**Preliminary Peer Selection**: Before calling valuation, identify 5-8 comparable companies using Data Contract sector/industry fields + WebSearch. This peer list will be reused in §5 (Step 7) — do NOT rebuild from scratch. Pass it to the valuation skill.
+**Section ordering rationale**: All 18 analytical sections come BEFORE §20 Valuation so that valuation rests on full business understanding (competitive position, monetization quality, unit economics, etc.) rather than financial snapshots alone. §1 Thesis and §21 Scenarios come AFTER §20 — they synthesize analysis + valuation, preserving the Valuation Independence Rule (no narrative anchoring of §20).
 
-4. **§20 Valuation Framework (800-1,200 words)** — Read and execute `skills/valuation/SKILL.md` with:
-   - Financial data from `Research/{ticker}/data_contract.md`
-   - Preliminary peer list (constructed above)
-   - Market config from `references/markets/us.md`
+Write each section 300–600 words (except §12 which follows its expanded Key Assumptions Narrative requirements per `investment_memo.md`).
 
-**§20 must include all 5 sub-sections**: 20a (Comps with statistical summary rows), 20b (DCF with Sanity Check table), 20c (Reverse DCF), 20d (Fair Value Synthesis with Football Field + Scenario Valuation Table), 20e (Consensus Comparison). See `investment_memo.md` for detailed requirements.
+### Step 4.1: §2 Market Structure & Size
 
----
+TAM/SAM, growth drivers, penetration. Quantitative data from Data Contract.
 
-## Step 6: Thesis & Scenarios (§1, §21)
+### Step 4.2: §3 Customer Segmentation & Demand
 
-Now write thesis and scenarios, constrained by the valuation output from Step 5:
+### Step 4.3: §4 Product & Roadmap
 
-5. **§1 Thesis Framework** — Investment thesis with structured pillar narratives (Market Opportunity / Capture Logic / Financial Impact / Falsification per pillar), variant view, "why now"
-6. **§21 Scenarios & Catalysts (1,500-2,000 words)** — Must include all 4 sub-sections: 21a (Scenario Analysis with Key Assumptions tables), 21b (Scenario Comparison with narrative E[TR]), 21c (Growth Drivers), 21d (Catalysts & Monitoring). Bear case must comply with decision-rules Bear Case Construction Rules (minimum -20% return for beta ≥ 1.0 stocks).
+### Step 4.4: §5a Competitive Landscape — Identification only
 
-**Cross-check**: If §1 thesis implies a fair value that diverges >20% from §20's DCF output, you MUST reconcile. Either adjust the thesis narrative or explain why the DCF is structurally conservative/aggressive.
+Identify 5–8 direct competitors based on §3 (customer overlap) and §4 (product overlap) plus WebSearch. For each peer, record a 1-line rationale (business model similarity, scale, geography, customer overlap).
 
-Purpose: Ensure thesis is data-driven, not narrative-driven.
+| Peer Ticker | Reason for inclusion (1 line) |
+|-------------|--------------------------------|
+| PEER_1      | ...                            |
+| ...         | ...                            |
 
----
+Output: `{peer_set}` = list of 5–8 ticker symbols.
 
-## Step 7: Remaining Sections (§3-§19)
+**Do NOT fill Template B Peer Comparison yet** — peer financials have not been fetched. Template B is completed in §5b after Step 4.5.
 
-**Reminder**: All financial data must come from `Research/{ticker}/data_contract.md`.
+### Step 4.5: Peer Data Supplement Fetch
 
-Write remaining sections (300-600 words each):
+Read and execute `skills/data-fetch/SKILL.md` with:
+- `{ticker}` (target, unchanged)
+- `{peer_set}` from Step 4.4
+- `{market}` (unchanged)
+- `{mode}` = `"supplement"`
 
-- §3 Customer Segmentation & Demand
-- §4 Product & Roadmap
-- §5 Competitive Landscape
+This appends the `## Peer Data` section to the existing Data Contract. Every row's `Pull Date` must equal the research day (today).
+
+### Step 4.6: §5b Competitive Dynamics + Template B
+
+Fill Template B Peer Comparison from the Data Contract's `## Peer Data` section. Write §5b prose covering competitive position, market share dynamics, moat differentiation.
+
+If at this stage you judge a fetched peer is structurally non-comparable, document the exclusion in a §5b "Outlier Exclusions" subsection with reason. **Do NOT remove the row from the Data Contract** — it stays as audit record. Template B includes only the peers you actually use; the Data Contract may contain more rows.
+
+### Step 4.7–4.20: §6 through §19
+
+Write the remaining analytical sections in numerical order.
+
+**On-demand supplement is available at any analytical step.** Two trigger types:
+
+- **Peer supplement** — if a section surfaces additional peer candidates whose data would meaningfully shift the analysis (e.g., §10 Pricing Power benchmark requires an unconsidered peer), invoke `data-fetch(mode=supplement, peer_set=[NEW_TICKER])`. New rows append to `## Peer Data`. Document the addition in §5b or wherever the peer is invoked.
+- **Research supplement** — if a section needs additional qualitative material beyond the initial Coverage Log (e.g., §15 Data & AI Economics needs specifics on a recent chip launch; §17 Supply Chain needs supplier disclosure; §18 Risk Inventory needs litigation timeline), invoke `data-fetch(mode=supplement, topics=["{focused query}"])`. WebSearch findings append to `## Research Supplement` with full source citations and timestamps. Cite the block reference (e.g., "see Research Supplement 2026-05-19 #2") in the section's prose.
+
+Both supplement types may be combined in one call when a section needs both kinds of material. The Data Contract retains every supplement entry as an append-only audit record. Trigger supplements whenever the analysis genuinely benefits — do NOT pad with low-value queries; each call should have a stated reason in the triggering section's text.
+
+Sections to write (in order):
+
 - §6 Ecosystem & Platform Health
 - §7 Go-to-Market & Distribution
 - §8 Retention & Expansion
 - §9 Monetization Model & Revenue Quality
 - §10 Pricing Power & Elasticity
 - §11 Unit Economics & Efficiency
+- §12 Financial Condition — Revenue, margins, Rule of 40, FCF, leading indicators. Must include Key Assumptions Narrative per `investment_memo.md`.
+- §13 Capital Structure — Debt, leverage, WACC, liquidity. WACC inputs feed §20 DCF.
 - §14 Moat & Data Advantage
 - §15 Data & AI Economics
 - §16 Execution Quality & Organization
@@ -142,11 +152,40 @@ Write remaining sections (300-600 words each):
 - §18 Risk Inventory & Mitigations
 - §19 M&A Strategy & Optionality
 
-Purpose: Complete company-level deep analysis.
+Purpose: Complete company-level deep analysis before valuation, so §20's DCF/Comps assumptions are grounded in full business understanding rather than financial snapshots alone.
 
 ---
 
-## Step 8: Rating
+## Step 5: §20 Valuation
+
+**Valuation comes AFTER all 18 analytical sections (§2–§19) are complete.** This ordering ensures the DCF growth/margin/capex assumptions, the comps premium/discount judgment, and the Reverse DCF reasonableness check all rest on the analytical work just completed.
+
+**CRITICAL — Valuation Independence Rule**: §20 must be written BEFORE §1 (Thesis) and §21 (Scenarios). This prevents narrative anchoring from biasing the valuation. The DCF and comps should produce a fair value range based on financial data and competitive analysis — the thesis is then constructed around (and constrained by) the valuation output.
+
+Read and execute `skills/valuation/SKILL.md` with:
+- Data Contract path: `Research/{ticker}/data_contract.md` (contains target rows + `## Peer Data` populated in Step 4.5)
+- Market config from `references/markets/us.md`
+
+**§20 must include all 5 sub-sections**: 20a (Comps with statistical summary rows), 20b (DCF with Sanity Check table), 20c (Reverse DCF), 20d (Fair Value Synthesis with Football Field + Scenario Valuation Table), 20e (Consensus Comparison). See `investment_memo.md` for detailed requirements.
+
+If §20a Comps surfaces a need for additional peer benchmarks not in the current Peer Data section, you may invoke another `data-fetch(mode=supplement)` here as a last opportunity to extend the peer set. Document the rationale in §20a.
+
+---
+
+## Step 6: Thesis & Scenarios (§1, §21)
+
+§1 Thesis and §21 Scenarios come LAST — they synthesize the entire memo including the §20 valuation result.
+
+1. **§1 Thesis Framework** — Investment thesis with structured pillar narratives (Market Opportunity / Capture Logic / Financial Impact / Falsification per pillar), variant view, "why now"
+2. **§21 Scenarios & Catalysts (1,500–2,000 words)** — Must include all 4 sub-sections: 21a (Scenario Analysis with Key Assumptions tables), 21b (Scenario Comparison with narrative E[TR]), 21c (Growth Drivers), 21d (Catalysts & Monitoring). Bear case must comply with decision-rules Bear Case Construction Rules (minimum -20% return for beta ≥ 1.0 stocks).
+
+**Cross-check**: If §1 thesis implies a fair value that diverges >20% from §20's DCF output, you MUST reconcile. Either adjust the thesis narrative or explain why the DCF is structurally conservative/aggressive — do NOT silently retune §20.
+
+Purpose: Ensure thesis is data-driven and valuation-anchored, not narrative-driven.
+
+---
+
+## Step 7: Rating
 
 1. **Quality Scorecard** — Read and execute `skills/quality-scorecard/SKILL.md` with:
    - Analysis content from all 21 sections (§1-§21)

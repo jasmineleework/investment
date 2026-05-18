@@ -107,21 +107,50 @@ def _check_banned_phrases(text: str) -> "list[str]":
     return violations
 
 
-def _check_peer_section(text: str, today: _dt.date) -> "list[str]":
+def _check_peer_section(text: str, today: _dt.date, mode: str) -> "list[str]":
+    """Validate the `## Peer Data` section.
+
+    The `mode` parameter controls whether this section is required:
+
+    - `full`       — initial target fetch. `## Peer Data` may be present
+                     but empty (no data rows yet). Section absence is fine
+                     too: stock-research will trigger a supplement call
+                     after §5a.
+    - `quick`      — quick-check path. Peer Data may be absent entirely
+                     (quick-check often skips peers).
+    - `supplement` — post-supplement validation. Section MUST exist and
+                     contain ≥ 5 data rows, every row Pull Date == today.
+    """
     violations = []
     section = _extract_section(text, PEER_SECTION_HEADING)
     if section is None:
-        violations.append("missing required `## Peer Data` section")
+        if mode == "supplement":
+            violations.append(
+                "missing required `## Peer Data` section (supplement mode expects it populated)"
+            )
+        # full / quick: absence is OK
         return violations
 
     rows = _table_rows(section)
+
+    # In `full` mode at initial generation, the section may be empty
+    # (data-fetch wrote the header skeleton; supplement will fill rows).
+    # In `quick` mode, peers are optional.
+    # Only enforce row-count and per-row checks in `supplement` mode.
+    if mode != "supplement":
+        return violations
+
     if len(rows) < 5:
         violations.append(
-            f"Peer Data section has only {len(rows)} data row(s); minimum is 5"
+            f"Peer Data section has only {len(rows)} data row(s); minimum is 5 in supplement mode"
         )
     if len(rows) > 8:
+        # 8 is the recommended max for Comps median computation; extra rows
+        # beyond 8 are tolerated as audit-retention (excluded peers stay in
+        # the Contract per append-only semantics) but flagged as a warning.
         violations.append(
-            f"Peer Data section has {len(rows)} data rows; maximum is 8 (drop the least comparable)"
+            f"Peer Data section has {len(rows)} data rows; recommended max for Comps is 8. "
+            f"Extra rows must be documented as excluded in §20a 'Outlier Exclusions'."
         )
 
     for row in rows:
@@ -163,14 +192,14 @@ def _check_peer_section(text: str, today: _dt.date) -> "list[str]":
     return violations
 
 
-def validate(path: pathlib.Path, today: _dt.date) -> "list[str]":
+def validate(path: pathlib.Path, today: _dt.date, mode: str) -> "list[str]":
     if not path.exists():
         return [f"file not found: {path}"]
     text = path.read_text(encoding="utf-8")
 
     violations: "list[str]" = []
     violations.extend(_check_banned_phrases(text))
-    violations.extend(_check_peer_section(text, today))
+    violations.extend(_check_peer_section(text, today, mode))
     return violations
 
 
@@ -181,6 +210,16 @@ def main(argv: "list[str]") -> int:
         "--today",
         help="override research day (YYYY-MM-DD); default: system today",
     )
+    parser.add_argument(
+        "--mode",
+        choices=("full", "quick", "supplement"),
+        default="supplement",
+        help=(
+            "data-fetch invocation mode the Contract represents. "
+            "`supplement` (default) requires `## Peer Data` to be populated; "
+            "`full`/`quick` allow it to be absent or empty."
+        ),
+    )
     args = parser.parse_args(argv)
 
     today = (
@@ -188,16 +227,19 @@ def main(argv: "list[str]") -> int:
     )
     path = pathlib.Path(args.path)
     try:
-        violations = validate(path, today)
+        violations = validate(path, today, args.mode)
     except OSError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
 
     if not violations:
-        print(f"OK: {path} passes all data-provenance checks (research day={today.isoformat()})")
+        print(
+            f"OK: {path} passes all data-provenance checks "
+            f"(research day={today.isoformat()}, mode={args.mode})"
+        )
         return 0
 
-    print(f"FAIL: {len(violations)} violation(s) in {path}")
+    print(f"FAIL: {len(violations)} violation(s) in {path} (mode={args.mode})")
     for v in violations:
         print(f"  - {v}")
     return 1

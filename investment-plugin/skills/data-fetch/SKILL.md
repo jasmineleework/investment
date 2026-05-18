@@ -31,8 +31,28 @@ Collect and validate financial data for a given stock ticker. This skill is call
 ## Inputs
 
 - `{ticker}` — Stock ticker symbol (e.g., AAPL)
+- `{peer_set}` — List of peer ticker symbols (e.g., `["MSFT", "GOOGL"]`).
+  Empty `[]` on the initial `full`/`quick` call. In `supplement` mode,
+  pass a non-empty list to append peer rows to the Data Contract.
+- `{topics}` — List of WebSearch topic strings (e.g.,
+  `["Vera Rubin GPU launch schedule", "Microsoft Azure Maia chip ramp"]`).
+  In `supplement` mode, pass a non-empty list to add qualitative findings
+  to the Data Contract's `## Research Supplement` section. Either
+  `{peer_set}` or `{topics}` (or both) must be non-empty in supplement
+  mode — both empty is a no-op.
 - `{market}` — Market identifier (default: US)
-- `{mode}` — `"full"` (default, for /research) or `"quick"` (for /quick-check)
+- `{mode}` — One of:
+  - `"full"` (default for /research) — initial target fetch; generates the
+    Data Contract.
+  - `"quick"` (for /quick-check) — simplified target fetch.
+  - `"supplement"` — **generalized on-demand append** to the Data Contract.
+    Requires an existing Contract at `Research/{ticker}/data_contract.md`.
+    Two append targets, driven by which parameter is populated:
+    - `{peer_set}` → append rows to `## Peer Data`
+    - `{topics}` → append findings to `## Research Supplement`
+    Multiple supplement calls may be issued during one research run as
+    any analytical section (§5a competitor identification, §6–§19 deep
+    dives, §20 valuation cross-checks) surfaces additional data needs.
 
 ## Outputs
 
@@ -42,7 +62,57 @@ Collect and validate financial data for a given stock ticker. This skill is call
 
 ---
 
-## Step 0: Environment Detection
+## Step 0: Invocation Routing
+
+Decide what kind of work this invocation does, based on `{mode}`.
+
+**`mode == "full"` or `mode == "quick"`** (initial target fetch):
+- Expect no prior `Research/{ticker}/data_contract.md`. If one exists, treat as a fresh research run and overwrite.
+- Set `ALL_TICKERS = [ticker]`. The `## Peer Data` section is left empty
+  at this stage; it will be filled later by a `supplement` call invoked
+  from `stock-research` after §5a competitor identification.
+- Proceed to Step 0a (Environment Detection) and the standard Tier 1–3
+  flow below.
+
+**`mode == "supplement"`** (on-demand append to existing Contract):
+- Require an existing `Research/{ticker}/data_contract.md`. If absent, error out — `supplement` is meaningless without a base Contract.
+- Require **at least one** of `peer_set` or `topics` to be non-empty. If both are empty, error out (no-op).
+- **If `peer_set` is non-empty** (peer financial supplement):
+  - Set `ALL_TICKERS = peer_set` (target is skipped — already fetched).
+  - Run only Tier 1 MCP for each peer in `ALL_TICKERS` (peers do NOT need
+    Tier 2 deep fields like analyst targets or institutional ownership; the
+    Peer Data table only needs price, financials, EBITDA, net income).
+  - At Step 2 (Build Data Contract): append rows to the `## Peer Data`
+    section. **Never overwrite or delete existing rows.** If any pre-existing
+    row's `Pull Date` is not today, re-pull that row to refresh — the invariant
+    "every Peer Data row's Pull Date == today" must hold across the whole
+    section after each supplement call.
+- **If `topics` is non-empty** (qualitative WebSearch supplement):
+  - Run a targeted WebSearch query per topic (use the topic string verbatim
+    or as a starting prompt). Capture the top 3–5 relevant findings per
+    topic with source URLs and dates.
+  - At Step 2 (Build Data Contract): append entries to the
+    `## Research Supplement` section (one block per topic; see template in
+    `references/data_contract.md`). Each block contains: topic, query date,
+    triggered-by section (e.g., "§15 Data & AI Economics"), findings with
+    inline source citations.
+  - **Never delete prior Research Supplement entries** — they accumulate
+    across the research run as different sections surface their own data
+    needs. The Contract retains the full audit trail of what was looked up.
+- **If both `peer_set` and `topics` are populated**: do both in one
+  invocation (single Step A1 batch for peers + parallel WebSearch for topics).
+- The rest of the Contract (Company Profile, Income Statement, Balance
+  Sheet, etc.) is untouched in supplement mode regardless of which
+  parameter drives the call.
+
+**`ALL_TICKERS` in subsequent steps**: any reference to "the ticker" in the
+Tier 1 / Tier 2 / Tier 3 sub-steps should be read as "each ticker in
+`ALL_TICKERS`". When `ALL_TICKERS = [ticker]` (the initial mode) this
+collapses to the original single-ticker flow.
+
+---
+
+## Step 0a: Environment Detection
 
 Detect which data sources are available in the current runtime.
 
@@ -82,13 +152,27 @@ Data is fetched in priority order. Each tier fills gaps left by previous tiers.
 
 ---
 
-### Step A1: Tier 1 — MCP Tools (preferred)
+### Step A1: Tier 1 — MCP Tools (preferred, batched over ALL_TICKERS)
 
 **Skip this step if Environment = "claude-code" (no MCP tools).**
 
+Repeat the sub-steps below for **every** ticker in `ALL_TICKERS`. When
+`ALL_TICKERS = [ticker]` this is just one pass; when called via
+`mode=supplement` with N peers, run N passes (issue all peers' MCP calls
+in a single message — typically 3N tool invocations in parallel for
+yfinance + 2N for SEC EDGAR).
+
+**Per-ticker call set**: each ticker in `ALL_TICKERS` gets the yfinance
+three-tuple (`price`, `income_statement`, `cashflow`) and the SEC EDGAR
+financials. The **target ticker only** also gets `get_historical_stock_prices`,
+`get_dividends`, `get_earning_dates`, `get_news`, `get_recommendations`,
+`get_segment_data`, `get_insider_summary`, `get_recent_filings`,
+`compare_periods`, `analyze_insider_sentiment` — peers only need the
+fields populated in the Data Contract `## Peer Data` table.
+
 #### A1a: Yahoo Finance MCP (price, financials, cash flow)
 
-Call these tools in parallel:
+Call these tools in parallel **for each ticker in ALL_TICKERS**:
 
 | Tool | Parameters | Data it provides |
 |------|-----------|-----------------|
@@ -129,7 +213,16 @@ For US stocks, call these tools in parallel:
 
 ### Step A2: Tier 2 — Python Script Fallback
 
-Use scripts to fill gaps that MCP tools cannot cover. Run even if MCP succeeded — scripts provide unique data.
+Use scripts to fill gaps that MCP tools cannot cover **for the target
+ticker only**. Peer rows in the `## Peer Data` table only need fields
+already covered by Tier 1 MCP (price, financials, EBITDA, net income);
+do NOT run Tier 2 scripts per peer — running 6× `yahoo_fetch.py` for
+peers adds cost with negligible incremental data. The exception is if a
+peer's Tier 1 MCP returned no income statement at all: in that case fall
+back to `python3 yahoo_fetch.py <PEER_TICKER>` for **that single peer**
+and record the source as such in its row.
+
+Run even if MCP succeeded — scripts provide unique data for the target.
 
 #### A2a: Yahoo Finance script (quote-level fields MCP lacks)
 
@@ -260,6 +353,22 @@ After Step 1 (Path A or B), assemble the **Data Contract** — a single standard
 Save to: `Research/{ticker}/data_contract.md`
 
 Use the template and rules defined in `references/data_contract.md` to build the contract instance. Save the filled instance to `Research/{ticker}/data_contract.md`.
+
+### Mode-specific write behavior
+
+- **`mode=full`/`mode=quick`** (initial call): write the full Contract file
+  with target sections populated. The `## Peer Data` section is rendered
+  empty (header + table skeleton only) — `stock-research` will trigger a
+  `supplement` call after §5a to fill it. In `quick` mode, the `## Peer Data`
+  section may be omitted entirely if no peers are passed.
+- **`mode=supplement`** (peer append): read the existing Contract; append
+  new rows to the `## Peer Data` section. **Never overwrite or delete
+  existing rows.** If any pre-existing peer row's `Pull Date` does not
+  equal today, re-pull that row's data and update its row in place to
+  refresh — preserve the invariant that every row in `## Peer Data` has
+  `Pull Date == today` after each supplement call. The rest of the
+  Contract (Company Profile, Income Statement, Balance Sheet, etc.) is
+  untouched by supplement calls.
 
 ---
 
