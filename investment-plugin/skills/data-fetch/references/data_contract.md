@@ -9,8 +9,11 @@
 1. **Every numeric field must cite its source** (SEC EDGAR MCP, Yahoo Finance MCP, yahoo_fetch.py, fred_fetch.py, specific WebSearch result).
 2. **Source priority for conflicts**: SEC EDGAR MCP > Yahoo Finance MCP > Python scripts (yahoo_fetch.py / sec_edgar_fetch.py) > WebSearch.
 3. **Leave fields blank rather than guessing** — blank fields signal to downstream writers that data is unavailable.
-4. **The Data Contract is immutable during a single research run** — once generated, all sections reference it; no section may override these numbers.
-5. **Cross-phase back-fill exception**: `Target Price vs Fair Value Mid (%)` in Analyst Consensus is the only field that may be populated after initial generation — it requires Phase 4 (valuation) output. All other fields must be populated at generation time or left blank.
+4. **The Data Contract is append-only during a single research run** — no skill may modify or delete existing rows. Skills may APPEND new rows (e.g., supplemental peer rows) but never overwrite. The report (memo) is a filtered view of the Contract: it may exclude individual peer rows via "Outlier Exclusions" subsections, but the Contract retains every fetched row as audit record.
+5. **Append exceptions** (the only sources of new content after initial generation):
+   - **Phase 4 back-fill**: `Target Price vs Fair Value Mid (%)` in Analyst Consensus is populated after valuation completes — it requires Phase 4 output.
+   - **Peer Data supplement**: the `## Peer Data` section is filled by `data-fetch(mode=supplement)`, called from stock-research Step 4.5 after §5a Competitor Identification. Additional supplement calls during §6-§19 or §20 may append more peer rows on demand.
+   - Outside these two exceptions, all fields must be populated at initial generation time or left blank.
 
 ---
 
@@ -139,9 +142,24 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 | Equity Weight | % | |
 | WACC | % | calculated |
 
-## Peer Data（MANDATORY — all rows pulled on research day; no historical reuse)
+## Peer Data（MANDATORY — append-only; all rows pulled on research day; no historical reuse）
 
-Pull every peer in the peer set via the same data-fetch path as the target ticker (MCP first, scripts as fallback). **Pull Date for every row must equal the research day**; if any row's Pull Date ≠ today, re-pull before proceeding to §20a Comps.
+**Filled by `data-fetch(mode=supplement)`, NOT at initial generation.**
+stock-research invokes the supplement call from Step 4.5 (after §5a
+Competitor Identification produces the peer set). Subsequent supplement
+calls during §6-§19 or §20 may append additional peer rows on demand.
+
+**Append-only**: rows added by supplement calls stay forever — they are
+not deleted even if subsequent analysis judges the peer non-comparable.
+The report (§20a Comps, §5b Template B) is a filtered view: excluded
+peers are documented in "Outlier Exclusions" subsections, but the
+Contract retains the row as audit record.
+
+**Pull Date == research day (today)**: every row in this section must
+have `Pull Date` equal to today. Supplement calls refresh any stale
+rows in-place to maintain this invariant across the whole section. If
+any row's Pull Date ≠ today, validate_data_contract.py reports FAIL —
+trigger a supplement call to refresh.
 
 | Ticker | Price | Shares (M, diluted) | Market Cap ($B) | FY{YYYY}A Revenue ($M) | TTM EBITDA ($M) | Net Income ($M) | Net Debt ($M) | Source | Pull Date (YYYY-MM-DD) |
 |--------|-------|---------------------|-----------------|------------------------|------------------|------------------|---------------|--------|--------------------------|
