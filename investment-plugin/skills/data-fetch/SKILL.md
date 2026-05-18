@@ -11,6 +11,23 @@ description: >
 
 Collect and validate financial data for a given stock ticker. This skill is called by `stock-research` or `quick-check` and should not be invoked directly by the user.
 
+## CRITICAL RULE: 禁止数据估计（No Approximation）
+
+所有 **数值字段** 必须来自实时数据源（MCP 或脚本）。
+
+**禁止**：
+- "市场公开近似值"、"业界常见 ~22x"、"约莫 ~3.5x" 这类措辞
+- 用训练数据中的记忆数值填表（cutoff 之外的数据必然过时）
+- 跳过未抓取的字段而直接进入下游分析
+
+**强制**：
+- 每个数值（包括 peer）必须能追溯到 Data Contract 中的具体抓取记录
+- Peer 列表中每家公司必须分别调用 `mcp__yfinance__*` 或 `yahoo_fetch.py <PEER_TICKER>` 抓取
+- 真实抓不到的字段标 `N/A — 数据源不可得`，不写数字
+- 输出 Data Contract 时，**每行附数据来源**（"yfinance MCP"、"yahoo_fetch.py"、"SEC EDGAR 10-Q 引用"）
+
+任何含"~"、"约"、"approximately"、"市场公开近似"等措辞的 Data Contract 视为 **FAIL**，必须重新抓取。
+
 ## Inputs
 
 - `{ticker}` — Stock ticker symbol (e.g., AAPL)
