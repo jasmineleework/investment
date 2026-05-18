@@ -1,0 +1,74 @@
+name: Data Provenance Lint
+
+# Enforces the data-provenance discipline established by:
+#   PR #4 — no estimated data; no "~/约/approximately" phrasing
+#   PR #7 — Phase B Data Provenance Audit; Pull Date = research day
+#
+# Diff-based: only flags lines newly added by the PR. This avoids
+# false-positives on rule files that quote banned phrases as examples
+# (e.g. valuation/SKILL.md Failure Mode "~3.5x").
+
+on:
+  pull_request:
+    paths:
+      - 'investment-plugin/**'
+      - 'tasks/lessons.md'
+      - '.github/workflows/data-provenance-lint.yml'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Lint banned estimation phrases in NEW additions
+        run: |
+          set -euo pipefail
+          BASE="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1 --quiet || true
+
+          # Collect lines added in this PR (prefix '+' but not '+++' header)
+          ADDED=$(git diff "$BASE"...HEAD -- \
+            'investment-plugin/skills/**/*.md' \
+            'tasks/lessons.md' \
+            | grep -E '^\+[^+]' || true)
+
+          if [ -z "$ADDED" ]; then
+            echo "OK: no relevant markdown additions to lint"
+            exit 0
+          fi
+
+          # Banned numeric-context phrases: tilde+digit/dollar, 约+digit/dollar,
+          # approximately+digit, and Chinese hedge phrases that are always wrong.
+          PATTERN='(~\$|~[0-9]|约 [0-9]|约\$|approximately [0-9]|市场近似值|市场公开近似|业界常见)'
+
+          HITS=$(echo "$ADDED" | grep -E "$PATTERN" || true)
+          if [ -n "$HITS" ]; then
+            echo "❌ New lines contain banned estimation phrases:"
+            echo "$HITS"
+            echo ""
+            echo "Rule: peer/valuation data must be MCP-sourced with explicit dates."
+            echo "  See: investment-plugin/skills/valuation/SKILL.md (Step 0)"
+            echo "       investment-plugin/skills/data-fetch/SKILL.md (CRITICAL RULE)"
+            echo "       tasks/lessons.md (2026-05-19 entry)"
+            exit 1
+          fi
+          echo "OK: no banned phrases in PR additions"
+
+      - name: Validator self-test
+        run: |
+          set -euo pipefail
+          SCRIPT="investment-plugin/skills/data-fetch/scripts/validate_data_contract.py"
+          if [ ! -f "$SCRIPT" ]; then
+            echo "❌ Missing validator script: $SCRIPT"
+            exit 1
+          fi
+          python3 "$SCRIPT" --help >/dev/null
+          echo "OK: validator runnable"

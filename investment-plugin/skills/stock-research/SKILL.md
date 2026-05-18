@@ -187,7 +187,7 @@ Cross-check key numbers across sections. **All items must pass**:
 - Scenario probabilities: Bull + Base + Bear = 100%
 - §21 bear case total return ≥ -20% (when beta ≥ 1.0)
 - §20 comps statistical summary (Max/75th/Median/25th/Min) correctly computed
-- **Data Provenance Audit**: 报告中所有量化字段（目标股财务、peer 倍数、宏观参数、合同金额、客户份额、运营指标等）必须能追溯到 `Research/{ticker}/data_contract.md` 中带时间戳的具体抓取记录。任何字段以 "~"、"约"、"approximately"、"市场近似值" 等措辞出现于数值位置 = FAIL，必须用 MCP / 脚本 / 公开披露文件重新抓取并标注。**Peer 数据 Pull Date 必须 = 研究当天**——每次研究重新抓取最新数据，不复用任何历史快照。规则行业中立——任何 ticker 任何行业一视同仁。详见 `tasks/lessons.md` 2026-05-19 条目。
+- **Data Provenance Audit**: 报告中所有量化字段（目标股财务、peer 倍数、宏观参数、合同金额、客户份额、运营指标等）必须能追溯到 `Research/{ticker}/data_contract.md` 中带时间戳的具体抓取记录。任何字段以 "~"、"约"、"approximately"、"市场近似值" 等措辞出现于数值位置 = FAIL，必须用 MCP / 脚本 / 公开披露文件重新抓取并标注。**Peer 数据 Pull Date 必须 = 研究当天**——每次研究重新抓取最新数据，不复用任何历史快照。规则行业中立——任何 ticker 任何行业一视同仁。运行 `python3 investment-plugin/skills/data-fetch/scripts/validate_data_contract.py Research/{ticker}/data_contract.md` 自动检查；非零退出码 = FAIL。详见 `tasks/lessons.md` 2026-05-19 条目。
 - Rating vs. Gates: Rating = Buy only if all 4 gates pass + Quality ≥ 70
 - Appendix Projected Financial Model reconciles with §20 DCF projections
 
