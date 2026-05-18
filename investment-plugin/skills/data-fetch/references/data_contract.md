@@ -139,6 +139,21 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 | Equity Weight | % | |
 | WACC | % | calculated |
 
+## Peer Data（MANDATORY — all rows pulled on research day; no historical reuse)
+
+Pull every peer in the peer set via the same data-fetch path as the target ticker (MCP first, scripts as fallback). **Pull Date for every row must equal the research day**; if any row's Pull Date ≠ today, re-pull before proceeding to §20a Comps.
+
+| Ticker | Price | Shares (M, diluted) | Market Cap ($B) | FY{YYYY}A Revenue ($M) | TTM EBITDA ($M) | Net Income ($M) | Net Debt ($M) | Source | Pull Date (YYYY-MM-DD) |
+|--------|-------|---------------------|-----------------|------------------------|------------------|------------------|---------------|--------|--------------------------|
+|        |       |                     |                 |                        |                  |                  |               | yfinance MCP | |
+|        |       |                     |                 |                        |                  |                  |               |               | |
+
+Rules:
+- Minimum 5 peer rows, maximum 8
+- Every numeric cell must be filled or marked `N/A — data source unavailable`; **never use "~", "约", "approximately", or training-memory estimates**
+- `Pull Date` column must equal research day (today). 7-day tolerance windows or snapshot reuse are prohibited
+- If a peer's MCP fetch fails, mark the row `N/A — MCP fetch failed YYYY-MM-DD` and exclude from §20a median calculations
+
 ## Data Quality Notes
 - Environment: {claude-code | cowork}
 - [List any fields that could not be populated]

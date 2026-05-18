@@ -246,15 +246,18 @@ Used in §5 Competitive Landscape and §20 Valuation Framework. Do not hard-code
 - FCF Conversion — earnings quality analysis
 
 ```
-| Company    | Revenue | Rev Growth | Gross Margin | EBITDA Margin | [Optional...] |
-|------------|---------|------------|--------------|---------------|---------------|
-| {Target}   |         |            |              |               |               |
-| Peer 1     |         |            |              |               |               |
-| Peer 2     |         |            |              |               |               |
-| Peer 3     |         |            |              |               |               |
-| **Median** |         |            |              |               |               |
-Source: Company filings, market data.
+| Company    | Revenue | Rev Growth | Gross Margin | EBITDA Margin | [Optional...] | Source     | Pull Date |
+|------------|---------|------------|--------------|---------------|---------------|------------|-----------|
+| {Target}   |         |            |              |               |               | yfinance MCP | YYYY-MM-DD |
+| Peer 1     |         |            |              |               |               | yfinance MCP | YYYY-MM-DD |
+| Peer 2     |         |            |              |               |               | yfinance MCP | YYYY-MM-DD |
+| Peer 3     |         |            |              |               |               | yfinance MCP | YYYY-MM-DD |
+| **Median** |         |            |              |               |               | computed    | —          |
+
+Source: All peer data from yfinance MCP / SEC EDGAR MCP on {today's date}. Every row's Pull Date must equal the research day; no historical reuse, no estimation.
 ```
+
+**Mandatory `Source` and `Pull Date` columns**: every peer row (target + comparables) must include the data origin and the date pulled. `Pull Date` must equal the research day (today). Rows with stale dates, estimation phrasing (`~`, `约`, `approximately`), or missing source are invalid and must be re-fetched before the report is finalized.
 
 ### Template C: DCF Sensitivity
 
