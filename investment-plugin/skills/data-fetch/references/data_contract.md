@@ -12,8 +12,9 @@
 4. **The Data Contract is append-only during a single research run** — no skill may modify or delete existing rows. Skills may APPEND new rows (e.g., supplemental peer rows) but never overwrite. The report (memo) is a filtered view of the Contract: it may exclude individual peer rows via "Outlier Exclusions" subsections, but the Contract retains every fetched row as audit record.
 5. **Append exceptions** (the only sources of new content after initial generation):
    - **Phase 4 back-fill**: `Target Price vs Fair Value Mid (%)` in Analyst Consensus is populated after valuation completes — it requires Phase 4 output.
-   - **Peer Data supplement**: the `## Peer Data` section is filled by `data-fetch(mode=supplement)`, called from stock-research Step 4.5 after §5a Competitor Identification. Additional supplement calls during §6-§19 or §20 may append more peer rows on demand.
-   - Outside these two exceptions, all fields must be populated at initial generation time or left blank.
+   - **Peer Data supplement**: the `## Peer Data` section is filled by `data-fetch(mode=supplement, peer_set=[...])`, called from stock-research Step 4.5 after §5a Competitor Identification. Additional supplement calls during §6-§19 or §20 may append more peer rows on demand.
+   - **Research Supplement**: the `## Research Supplement` section accepts on-demand WebSearch findings from `data-fetch(mode=supplement, topics=[...])`. Any §X writer (§3, §11, §15, §17, §18, etc.) may trigger this when their section needs additional qualitative material beyond the initial Coverage Log. Entries accumulate; they are never deleted.
+   - Outside these three exceptions, all fields must be populated at initial generation time or left blank.
 
 ---
 
@@ -171,6 +172,32 @@ Rules:
 - Every numeric cell must be filled or marked `N/A — data source unavailable`; **never use "~", "约", "approximately", or training-memory estimates**
 - `Pull Date` column must equal research day (today). 7-day tolerance windows or snapshot reuse are prohibited
 - If a peer's MCP fetch fails, mark the row `N/A — MCP fetch failed YYYY-MM-DD` and exclude from §20a median calculations
+
+## Research Supplement（append-only; on-demand qualitative WebSearch findings）
+
+**Filled by `data-fetch(mode=supplement, topics=[...])`.** Any analytical section writer (e.g., §15 Data & AI Economics needs specifics on a new chip launch; §17 Supply Chain needs a supplier disclosure; §18 Risk Inventory needs litigation timeline) may invoke a supplement call with a topic list when the initial Coverage Log doesn't have enough material. Entries accumulate across the research run as different sections surface different needs.
+
+**Format**: one block per topic, in chronological order of when the supplement call was made.
+
+### {Topic 1 string} — {YYYY-MM-DD}
+- Triggered by: §X {section name}
+- Query: "{the actual WebSearch query used}"
+- Findings:
+  - {finding 1 with inline source}: [source title](url) ({source date})
+  - {finding 2 with inline source}: [...]
+  - {finding 3 with inline source}: [...]
+
+### {Topic 2 string} — {YYYY-MM-DD}
+- Triggered by: §X {section name}
+- Query: "..."
+- Findings:
+  - ...
+
+Rules:
+- Append-only — never edit or delete a prior block (it's part of the audit trail)
+- Each block must record: topic, date the supplement call was made, triggering §section, the WebSearch query verbatim, and 3-5 findings with source URL + date
+- Findings may be cited in §X prose; cite the Research Supplement block reference (e.g., "see Research Supplement 2026-05-19 #1") in the section text
+- Coverage Log captures the same URLs; Research Supplement adds the context (which section triggered it and why)
 
 ## Data Quality Notes
 - Environment: {claude-code | cowork}

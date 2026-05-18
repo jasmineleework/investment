@@ -32,19 +32,27 @@ Collect and validate financial data for a given stock ticker. This skill is call
 
 - `{ticker}` — Stock ticker symbol (e.g., AAPL)
 - `{peer_set}` — List of peer ticker symbols (e.g., `["MSFT", "GOOGL"]`).
-  Empty `[]` on the initial `full`/`quick` call; required non-empty when
-  `mode=supplement` (caller asks for peer rows to be appended to the
-  existing Data Contract).
+  Empty `[]` on the initial `full`/`quick` call. In `supplement` mode,
+  pass a non-empty list to append peer rows to the Data Contract.
+- `{topics}` — List of WebSearch topic strings (e.g.,
+  `["Vera Rubin GPU launch schedule", "Microsoft Azure Maia chip ramp"]`).
+  In `supplement` mode, pass a non-empty list to add qualitative findings
+  to the Data Contract's `## Research Supplement` section. Either
+  `{peer_set}` or `{topics}` (or both) must be non-empty in supplement
+  mode — both empty is a no-op.
 - `{market}` — Market identifier (default: US)
 - `{mode}` — One of:
   - `"full"` (default for /research) — initial target fetch; generates the
     Data Contract.
   - `"quick"` (for /quick-check) — simplified target fetch.
-  - `"supplement"` — append-only peer fetch. Requires an existing Data
-    Contract at `Research/{ticker}/data_contract.md`. Adds rows to the
-    `## Peer Data` section without modifying any other content. Multiple
-    supplement calls may be issued during one research run as more peer
-    candidates surface during §6–§19 or §20 analysis.
+  - `"supplement"` — **generalized on-demand append** to the Data Contract.
+    Requires an existing Contract at `Research/{ticker}/data_contract.md`.
+    Two append targets, driven by which parameter is populated:
+    - `{peer_set}` → append rows to `## Peer Data`
+    - `{topics}` → append findings to `## Research Supplement`
+    Multiple supplement calls may be issued during one research run as
+    any analytical section (§5a competitor identification, §6–§19 deep
+    dives, §20 valuation cross-checks) surfaces additional data needs.
 
 ## Outputs
 
@@ -66,19 +74,36 @@ Decide what kind of work this invocation does, based on `{mode}`.
 - Proceed to Step 0a (Environment Detection) and the standard Tier 1–3
   flow below.
 
-**`mode == "supplement"`** (append peers to existing Contract):
+**`mode == "supplement"`** (on-demand append to existing Contract):
 - Require an existing `Research/{ticker}/data_contract.md`. If absent, error out — `supplement` is meaningless without a base Contract.
-- Set `ALL_TICKERS = peer_set` (target is skipped — already fetched).
-- Run only Tier 1 MCP for each peer in `ALL_TICKERS` (peers do NOT need
-  Tier 2 deep fields like analyst targets or institutional ownership; the
-  Peer Data table only needs price, financials, EBITDA, net income).
-- At Step 2 (Build Data Contract): append rows to the `## Peer Data`
-  section. **Never overwrite or delete existing rows.** If any pre-existing
-  row's `Pull Date` is not today, re-pull that row to refresh — the invariant
-  "every Peer Data row's Pull Date == today" must hold across the whole
-  section after each supplement call.
-- The rest of the Contract (Company Profile, Income Statement, Balance Sheet,
-  etc.) is untouched.
+- Require **at least one** of `peer_set` or `topics` to be non-empty. If both are empty, error out (no-op).
+- **If `peer_set` is non-empty** (peer financial supplement):
+  - Set `ALL_TICKERS = peer_set` (target is skipped — already fetched).
+  - Run only Tier 1 MCP for each peer in `ALL_TICKERS` (peers do NOT need
+    Tier 2 deep fields like analyst targets or institutional ownership; the
+    Peer Data table only needs price, financials, EBITDA, net income).
+  - At Step 2 (Build Data Contract): append rows to the `## Peer Data`
+    section. **Never overwrite or delete existing rows.** If any pre-existing
+    row's `Pull Date` is not today, re-pull that row to refresh — the invariant
+    "every Peer Data row's Pull Date == today" must hold across the whole
+    section after each supplement call.
+- **If `topics` is non-empty** (qualitative WebSearch supplement):
+  - Run a targeted WebSearch query per topic (use the topic string verbatim
+    or as a starting prompt). Capture the top 3–5 relevant findings per
+    topic with source URLs and dates.
+  - At Step 2 (Build Data Contract): append entries to the
+    `## Research Supplement` section (one block per topic; see template in
+    `references/data_contract.md`). Each block contains: topic, query date,
+    triggered-by section (e.g., "§15 Data & AI Economics"), findings with
+    inline source citations.
+  - **Never delete prior Research Supplement entries** — they accumulate
+    across the research run as different sections surface their own data
+    needs. The Contract retains the full audit trail of what was looked up.
+- **If both `peer_set` and `topics` are populated**: do both in one
+  invocation (single Step A1 batch for peers + parallel WebSearch for topics).
+- The rest of the Contract (Company Profile, Income Statement, Balance
+  Sheet, etc.) is untouched in supplement mode regardless of which
+  parameter drives the call.
 
 **`ALL_TICKERS` in subsequent steps**: any reference to "the ticker" in the
 Tier 1 / Tier 2 / Tier 3 sub-steps should be read as "each ticker in

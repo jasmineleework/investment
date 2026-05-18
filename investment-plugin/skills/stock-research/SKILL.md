@@ -126,7 +126,14 @@ If at this stage you judge a fetched peer is structurally non-comparable, docume
 
 ### Step 4.7–4.20: §6 through §19
 
-Write the remaining analytical sections in numerical order. If any section surfaces additional peer candidates whose data would meaningfully shift the analysis (e.g., §10 Pricing Power benchmark requires an unconsidered peer), invoke `data-fetch` again with `mode=supplement` to append the new peers to the Data Contract, then continue. Document the addition in the relevant section (§5b or wherever the peer is invoked).
+Write the remaining analytical sections in numerical order.
+
+**On-demand supplement is available at any analytical step.** Two trigger types:
+
+- **Peer supplement** — if a section surfaces additional peer candidates whose data would meaningfully shift the analysis (e.g., §10 Pricing Power benchmark requires an unconsidered peer), invoke `data-fetch(mode=supplement, peer_set=[NEW_TICKER])`. New rows append to `## Peer Data`. Document the addition in §5b or wherever the peer is invoked.
+- **Research supplement** — if a section needs additional qualitative material beyond the initial Coverage Log (e.g., §15 Data & AI Economics needs specifics on a recent chip launch; §17 Supply Chain needs supplier disclosure; §18 Risk Inventory needs litigation timeline), invoke `data-fetch(mode=supplement, topics=["{focused query}"])`. WebSearch findings append to `## Research Supplement` with full source citations and timestamps. Cite the block reference (e.g., "see Research Supplement 2026-05-19 #2") in the section's prose.
+
+Both supplement types may be combined in one call when a section needs both kinds of material. The Data Contract retains every supplement entry as an append-only audit record. Trigger supplements whenever the analysis genuinely benefits — do NOT pad with low-value queries; each call should have a stated reason in the triggering section's text.
 
 Sections to write (in order):
 
