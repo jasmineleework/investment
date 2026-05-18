@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -148,13 +149,71 @@ def split_long(text: str, max_chars: int = MAX_MSG_CHARS) -> list[str]:
     return chunks
 
 
+def _markdown_to_telegram_html(md: str) -> str:
+    """Convert a subset of Markdown to Telegram-supported HTML.
+
+    Telegram HTML mode supports: <b> <i> <u> <s> <code> <pre> <a> <blockquote>.
+    Standard `parse_mode=Markdown` (V1) is too restrictive: it doesn't render
+    `## headings` and uses *single* stars for bold (instead of **double**).
+    Standard MarkdownV2 requires aggressive escaping of `-` `.` `(` `)` `!` `+`
+    `=` etc., which mangles our tables and price ranges like `$273–$315`.
+    HTML mode is the cleanest fit: only `& < >` need escaping.
+
+    Conversion order matters — escape first, then transform.
+    """
+    # 1. Escape HTML special chars in the raw text
+    s = md.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    # 2. Fenced code block ```...``` → <pre>...</pre>  (multi-line; DOTALL)
+    s = re.sub(
+        r"```(?:[^\n]*)\n(.*?)```",
+        lambda m: f"<pre>{m.group(1)}</pre>",
+        s,
+        flags=re.DOTALL,
+    )
+
+    # 3. Headings (# / ## / ### …) → bold line. Telegram has no heading concept.
+    s = re.sub(r"^#{1,6}\s+(.+?)\s*$", r"<b>\1</b>", s, flags=re.MULTILINE)
+
+    # 4. Inline code `X` → <code>X</code>  (single backtick, no newline inside)
+    s = re.sub(r"`([^`\n]+?)`", r"<code>\1</code>", s)
+
+    # 5. Link [text](url) → <a href="url">text</a>
+    s = re.sub(
+        r"\[([^\]\n]+?)\]\(([^)\s]+?)\)",
+        r'<a href="\2">\1</a>',
+        s,
+    )
+
+    # 6. Bold **X** → <b>X</b>   (after link, so link text inside ** still works)
+    s = re.sub(r"\*\*([^*\n]+?)\*\*", r"<b>\1</b>", s)
+
+    # 7. Italic _X_ → <i>X</i>  (whole-word, avoid breaking variable_names)
+    s = re.sub(r"(?<![A-Za-z0-9_])_([^_\n]+?)_(?![A-Za-z0-9_])", r"<i>\1</i>", s)
+
+    # 8. Horizontal rule --- → blank line
+    s = re.sub(r"^---+\s*$", "", s, flags=re.MULTILINE)
+
+    # 9. Bullets — Telegram HTML has no <ul>/<li>; markdown `-` would show as
+    #    bare dashes on mobile. Replace with Unicode bullets that mobile fonts
+    #    render cleanly (and stay readable in PC markdown viewers too).
+    #    Top-level `- X`           → `• X`
+    #    Nested `  - X` / `   - X` → `   ◦ X`
+    s = re.sub(r"^ {2,3}-\s+(.+?)$", r"   ◦ \1", s, flags=re.MULTILINE)
+    s = re.sub(r"^-\s+(.+?)$", r"• \1", s, flags=re.MULTILINE)
+
+    return s
+
+
 def telegram_send(token: str, chat_id: str, text: str) -> tuple[bool, str]:
     """Send one message. Returns (ok, error_msg)."""
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    # Convert markdown → HTML so headings, bold, links render correctly.
+    html_text = _markdown_to_telegram_html(text)
     data = urllib.parse.urlencode({
         "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "Markdown",
+        "text": html_text,
+        "parse_mode": "HTML",
         "disable_web_page_preview": "true",
     }).encode("utf-8")
     req = urllib.request.Request(url, data=data, method="POST")
