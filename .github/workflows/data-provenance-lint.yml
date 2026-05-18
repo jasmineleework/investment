@@ -47,7 +47,11 @@ jobs:
 
           # Banned numeric-context phrases: tilde+digit/dollar, 约+digit/dollar,
           # approximately+digit, and Chinese hedge phrases that are always wrong.
-          PATTERN='(~\$|~[0-9]|约 [0-9]|约\$|approximately [0-9]|市场近似值|市场公开近似|业界常见)'
+          # The leading group requires the phrase NOT be inside quotation marks
+          # (straight ", Chinese 「『, or markdown backtick `) so rule-defining
+          # lines and SKILL files can quote banned phrases as negative examples
+          # without tripping the lint.
+          PATTERN='(^|[^"`「『])(~\$|~[0-9]|约 [0-9]|约\$|approximately [0-9]|市场近似值|市场公开近似|业界常见)'
 
           HITS=$(echo "$ADDED" | grep -E "$PATTERN" || true)
           if [ -n "$HITS" ]; then
