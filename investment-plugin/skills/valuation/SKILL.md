@@ -58,13 +58,30 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 
 ## Method 1: Comparable Company Analysis
 
-### Step 0 (新增强制步骤): Peer Data Fetch
-对 peer 列表中每一家公司，分别执行：
-1. `mcp__yfinance__get_current_stock_price` + `get_income_statement` + `get_cashflow`
-2. 若 MCP 不可用或字段缺失：`python3 yahoo_fetch.py <PEER_TICKER>` 拉取 quote
-3. 把抓取到的实时数值写入 peer comp 表，**不可使用记忆中的近似值**
+### Step 0: Peer Data Validation（读 Data Contract，不在此抓取）
 
-非美股 peer（如 `SU.PA` Schneider、`6504.T` 三菱）同样必须用 yfinance 抓取——yfinance 支持全球交易所。
+Peer 数据已由 stock-research Step 4.5 通过 `data-fetch(mode=supplement)`
+追加到 Data Contract 的 `## Peer Data` 节。本步骤只做校验，**不发起任何
+MCP 调用**——valuation 是消费者，data-fetch 是抓取者，两者职责分离。
+
+执行：
+
+1. 读取 `Research/{ticker}/data_contract.md` 的 `## Peer Data` 节
+2. 校验：
+   - 至少 5 行（且 ≤ 8 行用于 Comps 中位计算；额外行视为审计保留）
+   - 每行 `Pull Date == today`
+   - 无 `~`、`约`、`approximately`、`市场近似值` 等估算措辞
+3. 运行 validator：
+   `python3 investment-plugin/skills/data-fetch/scripts/validate_data_contract.py Research/{ticker}/data_contract.md --mode supplement`
+4. 若校验失败：**BLOCK valuation**，返回 stock-research 处理。处理方式有两类：
+   - **行数不足或缺关键 peer**：触发 `data-fetch(mode=supplement, peer_set=[NEW])` 增量追加
+   - **某行 Pull Date ≠ today**（跨日继续研究）：触发 `data-fetch(mode=supplement, peer_set=[stale_tickers])` 刷新到今日
+5. **不允许在 valuation 内部修改 Data Contract**。Data Contract 是 append-only 全集；本 §20a Comps 表是过滤视图——若某行 peer 不可比，
+   在 20a "Outlier Exclusions" 段落记录排除原因 + 中位计算时跳过该行；
+   **不要删除 Contract 行**。
+
+非美股 peer（如 `SU.PA` Schneider、`6504.T` 三菱）由 data-fetch 通过
+yfinance 抓取；本步骤同样只读 Contract、不抓取。
 
 ### Step 1: Select Peer Group
 
