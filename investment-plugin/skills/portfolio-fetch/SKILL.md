@@ -53,7 +53,19 @@ Environment overrides (optional):
   "security_firm": "FUTUSG",
   "fetched_at": "<ISO8601>",
   "funds": {
-    "hkd": { "total_assets": ..., "market_val": ..., "cash": ..., "available_funds": ..., "power": ..., "risk_status": "LEVEL3" },
+    "hkd": {
+      "total_assets": ...,
+      "securities_assets": ...,    // 股票市值
+      "fund_assets": ...,          // 基金 / 现金管理 / MMF
+      "bond_assets": ...,
+      "pending_asset": ...,
+      "market_val": ...,           // = securities_assets (equities only)
+      "cash": ..., "us_cash": ..., "ca_cash": ...,
+      "avl_withdrawal_cash": ..., "frozen_cash": ...,
+      "available_funds": ..., "power": ...,
+      "initial_margin": ..., "maintenance_margin": ...,
+      "risk_status": "LEVEL3"
+    },
     "usd": { ... same shape ... }
   },
   "positions": [
@@ -63,35 +75,42 @@ Environment overrides (optional):
       "position_market": "US",
       "currency": "USD",
       "qty": 400.4,
-      "can_sell_qty": 400.4,
       "average_cost": 192.164,
       "nominal_price": 222.43,
       "market_val": 89060.97,
       "unrealized_pl": 12118.635,
       "pl_ratio_avg_cost": 15.75,
-      "realized_pl": 8.02,
       "today_pl_val": -1157.156,
       "snapshot": {
         "last_price": 222.43,
-        "pe_ratio": 45.371,
+        "pe_ratio": 45.371, "pe_ttm_ratio": ...,
         "pb_ratio": 34.234,
-        "pe_ttm_ratio": ...,
-        "earning_per_share": ...,
-        "highest52weeks_price": ...,
-        "lowest52weeks_price": ...,
+        "highest52weeks_price": ..., "lowest52weeks_price": ...,
         "total_market_val": 5384707168022.0,
         "dividend_ratio_ttm": ...
       }
     }
   ],
+  "weights": [
+    { "code": "US.GOOGL", "mv_hkd": ..., "currency": "USD",
+      "weight_pct": 57.9,        // % within equities
+      "weight_total_pct": 36.2 } // % of total assets (incl. funds/bonds/cash)
+  ],
   "summary": {
-    "total_market_val_usd": ...,
     "n_positions": 11,
-    "top5_concentration_pct": ...,
-    "hhi": ...
+    "total_assets_hkd": ..., "total_assets_usd": ...,
+    "equities_mv_hkd": ..., "equities_mv_usd": ...,
+    "liquid_assets_hkd": ...,    // cash + fund_assets + bond_assets + pending
+    "liquid_assets_usd": ...,
+    "liquid_pct_of_total": 37.6,
+    "top5_concentration_equities_pct": 98.5,
+    "top5_concentration_total_pct": 61.5,
+    "hhi_equities": 4152
   }
 }
 ```
+
+**Why two concentration views?** Equities-only views can be misleading when a chunk of the account is in money-market funds. The "% of total assets" view shows real single-name risk (e.g. a 60%-within-equities holding might be just 22% of total assets if 40% of the account sits in cash management).
 
 ## Field discipline (hard rules)
 
