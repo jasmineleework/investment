@@ -28,7 +28,43 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 
 ---
 
+## CRITICAL RULE: No Estimated Data (强制数据真实性)
+
+**所有用于估值的财务数据（财报项、倍数、市值、债务、beta、margin、growth 等）必须来自实时数据源**，绝不允许"市场公开近似值"、"约莫"、"业界常见"、"估计"等措辞。
+
+### 数据来源优先级（严格执行）
+1. **Tier 1**: yfinance MCP / SEC EDGAR MCP（实时）
+2. **Tier 2**: yahoo_fetch.py / sec_edgar_fetch.py（脚本拉取）
+3. **Tier 3**: WebSearch（仅限不可量化的定性分析，**禁止用于数值字段**）
+
+### 禁止行为
+- ❌ 在 peer comp 表中填入 "~3.5x"、"约 ~22x" 这类近似值并标注"市场公开近似值"
+- ❌ 在缺数据时跳过该 peer 而保留估值结论
+- ❌ 使用训练数据中的记忆数值（cutoff 之外的数据必然过时）
+- ❌ 在 DCF 输入（WACC、beta、debt rate）中使用估计或"行业平均"代替实测
+
+### 强制行为
+- ✅ 每一个数值字段必须能追溯到 data_contract.md 中的具体行
+- ✅ Peer 列表中每家公司必须分别调用 MCP / 脚本抓取（与目标股票同样的 data-fetch 流程）
+- ✅ 如某 peer 数据缺失，必须用 yahoo_fetch.py `<TICKER>` 显式补抓，**禁止用估计值替代**
+- ✅ 若某字段真的无法获取（如非上市公司、私募），必须在表格中标注 `N/A — 数据源不可得`，**不写数字**
+- ✅ 报告中每个 peer 数值附近必须能解释来源（脚注或 Data Sources 章节）
+
+### Failure Mode（必须 FAIL 的输出）
+- 任何 peer comp 行包含 "~"、"约"、"approximately"、"近似"、"市场公开"、"业界常见" 等措辞
+- 任何 valuation table 引用未抓取的数字
+
+---
+
 ## Method 1: Comparable Company Analysis
+
+### Step 0 (新增强制步骤): Peer Data Fetch
+对 peer 列表中每一家公司，分别执行：
+1. `mcp__yfinance__get_current_stock_price` + `get_income_statement` + `get_cashflow`
+2. 若 MCP 不可用或字段缺失：`python3 yahoo_fetch.py <PEER_TICKER>` 拉取 quote
+3. 把抓取到的实时数值写入 peer comp 表，**不可使用记忆中的近似值**
+
+非美股 peer（如 `SU.PA` Schneider、`6504.T` 三菱）同样必须用 yfinance 抓取——yfinance 支持全球交易所。
 
 ### Step 1: Select Peer Group
 
