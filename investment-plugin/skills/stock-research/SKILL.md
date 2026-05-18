@@ -207,7 +207,23 @@ Scan the entire assembled report and apply the following transformations:
 
 ### Phase D — Validation Checks
 
-Run all 5 checks below before saving:
+Run all 6 checks below before saving. **Check 0 is machine-enforced** (hard fail on non-zero exit); Checks 1-5 are LLM judgment.
+
+#### Check 0: Format Lint (machine-enforced — RUN FIRST)
+
+Run the validator on the assembled memo:
+
+```bash
+python3 investment-plugin/skills/stock-research/scripts/validate_memo_format.py Research/{ticker}/{date}_memo.md
+```
+
+Non-zero exit code = **FAIL**. This is a hard gate — fix every violation and re-run before proceeding to Checks 1-5. Three hard constraints checked:
+
+- **C1 Buy/Trim Zone**: Executive Summary MUST contain both a `| Buy Zone | $X – $Y | Initiate position |` row and a `| Trim Zone | ... |` row (per `references/investment_memo.md` L165-167). Free-text descriptions like "Buy Zone Low = $174" do NOT count — `morning-update` skill's `memo_loader.py` requires the table-row format.
+- **C2 Pillar titles**: §1 MUST contain ≥3 pillar titles in `**Thesis Pillar N: <title>**` or `**Pillar N: <title>**` form. **N must be an Arabic digit** (1, 2, 3, …). Chinese ordinals like `**支柱一：...**` are forbidden — they break the downstream parser. (Source: template L294.)
+- **C3 Catalyst dates**: §21d catalyst table MUST contain ≥1 row whose first cell is a strict `YYYY-MM-DD` date (annotations like `(est.)` are fine). Quarter labels (`2026Q2`, `2026 H1`, `持续`, `2027 上半年`) alone do NOT satisfy — `morning-update` parses these as misses. Mixing some YYYY-MM-DD rows with some quarter rows is a WARN (not FAIL).
+
+**Why this matters**: `Research/CRWV/2026-05-19_memo.md` shipped without these constraints and broke `morning-update` Part 3 entirely (0 zone signals, 0 catalysts detected). The validator catches all three classes of CRWV's failures.
 
 #### Check 1: Structural Completeness
 
@@ -272,8 +288,8 @@ If found:
 
 - **PASS** → Proceed to Step 10
 - **PASS WITH NOTES** → Append notes, proceed to Step 10
-- **FAIL** → Fix flagged issues and re-run all 5 checks
-- **Context window low** → Run Check 1 (structural) + Phase B (data reconciliation) + Check 5 (cross-report) only, append note that full validation was not completed
+- **FAIL** → Fix flagged issues and re-run **Check 0 first** (machine), then Checks 1-5
+- **Context window low** → Check 0 + Check 1 (structural) + Phase B (data reconciliation) + Check 5 (cross-report); skip Checks 2-4 and append a note. **Check 0 is non-negotiable** — it's a ~50ms script call.
 
 ---
 
