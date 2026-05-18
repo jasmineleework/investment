@@ -289,7 +289,7 @@ If found:
 - **PASS** → Proceed to Step 10
 - **PASS WITH NOTES** → Append notes, proceed to Step 10
 - **FAIL** → Fix flagged issues and re-run **Check 0 first** (machine), then Checks 1-5
-- **Context window low** → Check 0 + Check 1 (structural) + Phase B (data reconciliation) + Check 5 (cross-report); skip Checks 2-4 and append a note. **Check 0 is non-negotiable** — it's a ~50ms script call.
+- **Context window low** → Check 0 + Check 1 (structural) + Phase B (data reconciliation) + Check 5 (cross-report); skip Checks 2-4 and append a note. **Check 0 is non-negotiable** — sub-second script call, no excuse to skip.
 
 ---
 
