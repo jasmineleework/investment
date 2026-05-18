@@ -92,6 +92,14 @@ Each section's core analysis uses 3-4 bold-topic paragraphs — quantify first, 
 - 近似值须说明来源和置信度："管理层指引毛利率约 68%（Q2 FY2026 财报电话会）"
 - 计算展示须嵌入叙事：不写 `E[TR] = 25% × 77.8% + ...`，而写"加权预期回报率为 +34.6%，其中乐观情景（25% 概率，+77.8% 回报）贡献最大"
 
+**Projection Assumptions Format (全局适用)**:
+凡涉及财务投影或关键模型假设（营收增长、毛利率、WACC、场景参数等），必须写为完整叙事段落，不得以参数列表形式呈现。每项假设须包含三个要素：
+1. **假设值及依据** — 具体数值 + 来源（历史趋势、管理层指引、行业基准）
+2. **与 Base Case 的关系** — 说明该假设在 Bull/Bear 情景下如何变化
+3. **敏感度说明** — 该假设变动 ±X% 对 FCF 或估值的影响幅度
+
+此规则适用于所有包含投影假设的 section，尤其是 §12、§20、§21。
+
 **禁止**:
 - 箭头符号 `→` 用作因果或趋势指示（使用完整句子替代）
 - `~X%` 无来源说明的近似值
@@ -409,15 +417,7 @@ Source: DCF model. Highlighted cell = base case.
 - Flag accounting judgments that could swing EBIT by >200 bps.
 - Calculate FCF/share CAGR required to reach median fair value; assess plausibility.
 
-**Key Assumptions Narrative** (mandatory):
-Projection assumptions must be written as complete paragraphs, not parameter lists. Each assumption must include:
-- The assumed value and its basis (historical trend, management guidance, industry benchmark)
-- Relationship to the Base Case scenario
-- Sensitivity note: how a change of +/- X% in this assumption affects FCF
-
-**Bad**: `Revenue CAGR Y1-Y5: 30% → 20% → 15% → 10% → 8%`
-
-**Good**: 营收增长假设采用渐进放缓模型。第一年 30% 增长反映 HBM 产能从 Q2 开始满负荷运转（管理层 Q2 FY2026 指引 QoQ +37%）；第二年降至 20% 假设 HBM4 产能爬坡替代 HBM3E 出货下滑；第三至五年从 15% 逐步降至 8%，接近全球存储器行业长期增速（WSTS 预测 DRAM CAGR 6-8%）。若 AI 推理需求超预期（bull case），Y3 增速可能维持在 20% 以上。
+- **Key assumptions**: All projection assumptions in this section must follow the Projection Assumptions Format (see Writing Standards) — narrative paragraphs, not parameter lists.
 
 ### Section 13: Capital Structure & Cost of Capital
 *Purpose — Financing flexibility and risk*
@@ -506,6 +506,7 @@ Delegate to `skills/valuation/SKILL.md` for the full valuation analysis. This se
 
 #### 20b: DCF Model
 - DCF model with explicit assumptions + sensitivity table (Template C)
+- **DCF assumption narrative**: Revenue growth, margin, and CapEx assumptions must follow the Projection Assumptions Format (see Writing Standards).
 - **DCF Sanity Check Table** (mandatory — all 5 items must be addressed):
 
 | Sanity Check | Your Model | Acceptable Range | Pass/Fail |
@@ -583,7 +584,7 @@ Build 12-24 month bear, base, and bull scenarios summing probabilities to 100%. 
 
 3. **Catalysts Required** (Bull) or **Downside Triggers** (Bear): 3 specific events with timelines
 
-4. **Detailed Rationale**: 200-300 words narrative explaining how the scenario unfolds, with logical chain of events
+4. **Detailed Rationale**: 200-300 words narrative explaining how the scenario unfolds, with logical chain of events. Each scenario's assumptions must follow the Projection Assumptions Format (see Writing Standards) — not just table values, but narrative paragraphs explaining the logic chain.
 
 5. **Valuation Implications**: DCF-implied price / Comps-implied price / Scenario Target Price
 
