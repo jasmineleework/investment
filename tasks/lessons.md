@@ -48,7 +48,7 @@ CRWV 深度研报 §20a Comparable Companies 表中，**目标股 CRWV 与 NBIS�
 
 ### 教训规则
 
-- **通用数据溯源规则（行业中立）**：报告中每个数值都必须能在 `data_contract.md` 中找到带时间戳的来源行；"~"、"约"、"approximately"、"市场近似" 等措辞用于数值字段即视为 FAIL，无任何行业例外。Peer 数据时效不超过 7 天。任何 ticker、任何行业一视同仁——AI、消费、能源、医药、金融都是同样标准。
+- **通用数据溯源规则（行业中立）**：报告中每个数值都必须能在 `data_contract.md` 中找到带时间戳的来源行；"~"、"约"、"approximately"、"市场近似" 等措辞用于数值字段即视为 FAIL，无任何行业例外。**Peer 数据 Pull Date 必须 = 研究当天**——每次研究都重新抓取最新数据，不允许 7 天容忍窗口，不允许复用历史快照，不允许使用训练记忆。任何 ticker、任何行业一视同仁——AI、消费、能源、医药、金融都是同样标准。
 - **Phase B 数据溯源审计**：`stock-research/SKILL.md` Step 9 Phase B Reconciliation 加入 "Data Provenance Audit" 校验项，覆盖所有量化字段（目标股、peer、宏观、合同等），作为对 PR #4 上游规则的下游闭环。
 - **会话启动 git hygiene**：调用 `/research`、`/quick-check` 或 valuation skill 的会话，**第一步必须 `git fetch && git status`** 确认分支与 origin/main 的 delta；若落后则先 rebase 再开始工作。本次 CRWV 复盘 6 个 commits 落后并重蹈 PR #4 已经禁止的错误，是直接证据。
 - **复盘触发标准动作**：用户审计指出数据问题时，必须（a）立即承认，（b）用 MCP 重抓真实值，（c）评估对最终评级的影响，（d）将教训写入 `tasks/lessons.md` 并按需提议 SKILL.md 改动。
