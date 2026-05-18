@@ -298,14 +298,14 @@ def render_part2(data: dict, position_signals: dict) -> str:
         L.append("")
         return "\n".join(L)
 
-    # aligned text (no markdown table — mobile-readable)
-    # Columns: ticker(6) qty(8) cost(8) last(8) status(2) cum_pl(12) cum_pct(8) today_pl(10) action
-    L.append("```")
-    L.append(f"{'Ticker':<7}{'Qty':>8}  {'AvgCost':>8}  {'Last':>8}  {'状态':<4}  {'累计 P/L':>12}  {'累计 %':>8}  {'今日':>10}  Action")
-    L.append("─" * 100)
+    # Card layout per ticker — readable on mobile (no wrap-around).
+    # Markdown table abandoned because:
+    #  - Telegram <pre> font wraps at ~32 chars on iPhone, breaking 9-column tables
+    #  - PC markdown viewers render multi-line bullets cleanly too
     for tkr, sig in sorted(position_signals.items(), key=lambda kv: -float(kv[1].get("market_val") or 0)):
         p = sig["position"]
         emoji = STATUS_TO_EMOJI.get(sig["status"], E_NO_MEMO)
+        label = STATUS_TO_LABEL.get(sig["status"], "")
         action = ACTION_BY_STATUS.get(sig["status"], "持有")
         qty = p.get("qty") or 0
         avg = p.get("average_cost") or 0
@@ -315,13 +315,19 @@ def render_part2(data: dict, position_signals: dict) -> str:
         cum_pct = p.get("pl_ratio_avg_cost")
         today = p.get("today_pl_val")
         ccy = p.get("currency", "")
+
+        # Line 1: emoji + ticker + status label
+        L.append(f"{emoji} **{tkr}** · {label}")
+        # Line 2: position (qty × avg → last)
+        L.append(f"   {qty:g} sh @ ${avg:.2f} → ${last:.2f}")
+        # Line 3: cumulative + today P&L on one line
         L.append(
-            f"{tkr:<7}{qty:>8.2f}  ${avg:>7.2f}  ${last:>7.2f}  {emoji:<4}  "
-            f"{_fmt_money(cum_pl):>12} {ccy:<3}  {_fmt_pct(cum_pct):>8}  "
-            f"{_fmt_money(today):>10}  {action}"
+            f"   累计 {_fmt_money(cum_pl)} {ccy} ({_fmt_pct(cum_pct)}) · 今日 {_fmt_money(today)}"
         )
-    L.append("```")
-    L.append("")
+        # Line 4: action (only show if non-trivial)
+        if action and action != "持有":
+            L.append(f"   👉 {action}")
+        L.append("")  # blank line between tickers
 
     # Account summary (forwarded from portfolio-fetch summary)
     s = data.get("summary") or {}
