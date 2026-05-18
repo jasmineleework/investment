@@ -144,13 +144,24 @@ SNAPSHOT_KEEP = [
 ]
 
 FUNDS_KEEP = [
-    "total_assets", "market_val", "long_mv", "short_mv",
+    "total_assets",
+    # asset-class breakdown (sum to ~total_assets)
+    "securities_assets", "fund_assets", "bond_assets", "pending_asset",
+    # equities-only view (matches positions[].market_val sum)
+    "market_val", "long_mv", "short_mv",
+    # cash & liquidity
     "cash", "us_cash", "ca_cash",
     "avl_withdrawal_cash", "frozen_cash",
     "available_funds", "power",
+    # margin
     "initial_margin", "maintenance_margin",
     "risk_status",
 ]
+
+
+def _liquid(funds: dict) -> float:
+    """Cash + money-market funds + bonds + pending — treated as liquid assets."""
+    return sum(float(funds.get(k) or 0) for k in ("cash", "fund_assets", "bond_assets", "pending_asset"))
 
 
 def build_portfolio(acc_id: int) -> dict:
@@ -215,22 +226,36 @@ def build_portfolio(acc_id: int) -> dict:
         top5_pct = sum(w["weight_pct"] for w in weights[:5])
         hhi = sum(w["weight_pct"] ** 2 for w in weights)
 
+        funds_hkd = {f: funds_hkd_raw.get(f) for f in FUNDS_KEEP}
+        funds_usd = {f: funds_usd_raw.get(f) for f in FUNDS_KEEP}
+        liquid_hkd = _liquid(funds_hkd)
+        liquid_usd = _liquid(funds_usd)
+
+        # also expose each position's weight as % of TOTAL assets (not just equities)
+        # this is the honest "risk exposure" view
+        total_hkd_assets = float(funds_hkd.get("total_assets") or 0)
+        for w in weights:
+            w["weight_total_pct"] = (w["mv_hkd"] / total_hkd_assets * 100) if total_hkd_assets else 0
+
         return {
             "acc_id": acc_id,
             "security_firm": "FUTUSG",
             "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "funds": {
-                "hkd": {f: funds_hkd_raw.get(f) for f in FUNDS_KEEP},
-                "usd": {f: funds_usd_raw.get(f) for f in FUNDS_KEEP},
-            },
+            "funds": {"hkd": funds_hkd, "usd": funds_usd},
             "positions": positions,
             "weights": weights,
             "summary": {
                 "n_positions": len(positions),
-                "total_market_val_hkd": total_hkd,
-                "total_market_val_usd": total_usd,
-                "top5_concentration_pct": round(top5_pct, 2),
-                "hhi": round(hhi, 0),
+                "total_assets_hkd": funds_hkd.get("total_assets"),
+                "total_assets_usd": funds_usd.get("total_assets"),
+                "equities_mv_hkd": total_hkd,
+                "equities_mv_usd": total_usd,
+                "liquid_assets_hkd": liquid_hkd,
+                "liquid_assets_usd": liquid_usd,
+                "liquid_pct_of_total": round(liquid_hkd / total_hkd_assets * 100, 2) if total_hkd_assets else None,
+                "top5_concentration_equities_pct": round(top5_pct, 2),
+                "top5_concentration_total_pct": round(sum(w["weight_total_pct"] for w in weights[:5]), 2),
+                "hhi_equities": round(hhi, 0),
             },
         }
     finally:
@@ -262,26 +287,45 @@ def render_markdown(data: dict) -> str:
     fu = data["funds"]["usd"]
     summary = data["summary"]
     fetched = data["fetched_at"]
+    ta_hkd = float(fh.get("total_assets") or 0)
 
-    L.append(f"# Portfolio Snapshot")
+    def pct_of_total(v):
+        v = float(v or 0)
+        return (v / ta_hkd * 100) if ta_hkd else 0
+
+    L.append("# Portfolio Snapshot")
     L.append("")
     L.append(f"- **Account**: `{data['acc_id']}` ({data['security_firm']})")
     L.append(f"- **Fetched**: {fetched}")
     L.append(f"- **Positions**: {summary['n_positions']}")
     L.append("")
 
-    L.append("## Account Summary")
+    L.append("## Asset Allocation")
+    L.append("")
+    L.append("| Asset Class | HKD | USD | % of Total |")
+    L.append("|---|---:|---:|---:|")
+    L.append(f"| Equities | {_fmt(fh.get('securities_assets'))} | {_fmt(fu.get('securities_assets'))} | {pct_of_total(fh.get('securities_assets')):.1f}% |")
+    L.append(f"| Funds / Cash Mgmt | {_fmt(fh.get('fund_assets'))} | {_fmt(fu.get('fund_assets'))} | {pct_of_total(fh.get('fund_assets')):.1f}% |")
+    L.append(f"| Bonds | {_fmt(fh.get('bond_assets'))} | {_fmt(fu.get('bond_assets'))} | {pct_of_total(fh.get('bond_assets')):.1f}% |")
+    L.append(f"| Pending | {_fmt(fh.get('pending_asset'))} | {_fmt(fu.get('pending_asset'))} | {pct_of_total(fh.get('pending_asset')):.1f}% |")
+    L.append(f"| Cash (settled) | {_fmt(fh.get('cash'))} | {_fmt(fu.get('cash'))} | {pct_of_total(fh.get('cash')):.1f}% |")
+    L.append(f"| **Total Assets** | **{_fmt(fh.get('total_assets'))}** | **{_fmt(fu.get('total_assets'))}** | **100.0%** |")
+    L.append("")
+    L.append(f"**Liquid Assets** (cash + funds + bonds + pending): "
+             f"HKD {_fmt(summary['liquid_assets_hkd'])} / USD {_fmt(summary['liquid_assets_usd'])} "
+             f"= **{summary['liquid_pct_of_total']:.1f}%** of total" if summary.get("liquid_pct_of_total") is not None else "")
+    L.append("")
+
+    L.append("## Liquidity & Margin")
     L.append("")
     L.append("| Metric | HKD | USD |")
     L.append("|---|---:|---:|")
-    L.append(f"| Total Assets | {_fmt(fh.get('total_assets'))} | {_fmt(fu.get('total_assets'))} |")
-    L.append(f"| Securities MV | {_fmt(fh.get('market_val'))} | {_fmt(fu.get('market_val'))} |")
-    L.append(f"| Long MV | {_fmt(fh.get('long_mv'))} | {_fmt(fu.get('long_mv'))} |")
-    L.append(f"| Cash (base ccy) | {_fmt(fh.get('cash'))} | {_fmt(fu.get('cash'))} |")
-    L.append(f"| US Cash | {_fmt(fh.get('us_cash'))} | {_fmt(fu.get('us_cash'))} |")
     L.append(f"| Available Funds | {_fmt(fh.get('available_funds'))} | {_fmt(fu.get('available_funds'))} |")
     L.append(f"| Buying Power | {_fmt(fh.get('power'))} | {_fmt(fu.get('power'))} |")
+    L.append(f"| Frozen Cash | {_fmt(fh.get('frozen_cash'))} | {_fmt(fu.get('frozen_cash'))} |")
+    L.append(f"| Withdrawable | {_fmt(fh.get('avl_withdrawal_cash'))} | {_fmt(fu.get('avl_withdrawal_cash'))} |")
     L.append(f"| Initial Margin | {_fmt(fh.get('initial_margin'))} | {_fmt(fu.get('initial_margin'))} |")
+    L.append(f"| Maintenance Margin | {_fmt(fh.get('maintenance_margin'))} | {_fmt(fu.get('maintenance_margin'))} |")
     L.append(f"| Risk Status | **{fh.get('risk_status') or '—'}** | — |")
     L.append("")
 
@@ -306,13 +350,13 @@ def render_markdown(data: dict) -> str:
 
     L.append("## Concentration (HKD-normalized)")
     L.append("")
-    L.append(f"- **Top 5 weight**: {summary['top5_concentration_pct']}%")
-    L.append(f"- **HHI**: {int(summary['hhi'])} _(>2500 concentrated, <1500 diversified)_")
+    L.append(f"- **Within equities** — Top 5: **{summary['top5_concentration_equities_pct']}%**, HHI: **{int(summary['hhi_equities'])}** _(>2500 concentrated, <1500 diversified)_")
+    L.append(f"- **As % of total assets** — Top 5 single-stock exposure: **{summary['top5_concentration_total_pct']}%**")
     L.append("")
-    L.append("| Code | Weight |")
-    L.append("|---|---:|")
+    L.append("| Code | % of Equities | % of Total Assets |")
+    L.append("|---|---:|---:|")
     for w in data["weights"][:10]:
-        L.append(f"| {w['code']} | {w['weight_pct']:.1f}% |")
+        L.append(f"| {w['code']} | {w['weight_pct']:.1f}% | {w['weight_total_pct']:.1f}% |")
     L.append("")
 
     # by market
