@@ -25,3 +25,6 @@ __pycache__/
 
 # Morning Update — user-private watchlist (use watchlist.json.example as template)
 investment-plugin/references/watchlist.json
+
+# Personal task tracking and research run logs (local-only, not for shared repo)
+tasks/
