@@ -356,6 +356,55 @@ Where:
 
 ---
 
+## Step 11: Watchlist Integration
+
+After the memo is saved, decide whether the freshly-researched ticker should
+enter the watchlist.
+
+1. **Check live holdings** — read the latest portfolio. Use `portfolio-fetch`
+   if a recent JSON dump is not already available in this session. The ticker
+   is "held" iff it appears in `positions[].code` (strip the `US.` / `HK.`
+   prefix before comparing).
+
+2. **Check watchlist membership** — run:
+
+   ```bash
+   python3 investment-plugin/skills/watchlist/scripts/watchlist_io.py check {ticker}
+   ```
+
+   Exit code `0` = already on watchlist; exit code `1` = not on watchlist.
+
+3. **Decision matrix**:
+
+   | Held? | On watchlist? | Action |
+   |-------|---------------|--------|
+   | Yes   | —             | Skip (positions are tracked elsewhere). |
+   | No    | Yes           | Skip (already tracked). |
+   | No    | No            | **Ask the user** whether to add the ticker. |
+
+4. **If asking** — phrase it as a single short question, e.g.
+   *"{ticker} 当前无持仓且不在 watchlist,是否加入持续跟踪?"*. If the user
+   confirms, optionally collect a one-line `--notes` (e.g. catalyst window
+   or trigger condition) and a `--name` (company display name from the memo
+   header), then run:
+
+   ```bash
+   python3 investment-plugin/skills/watchlist/scripts/watchlist_io.py add {ticker} \
+       --name "{company_name}" \
+       --market US \
+       --notes "{user_notes_or_empty}"
+   ```
+
+   The script auto-discovers the latest memo under `Research/{ticker}/` and
+   timestamps the entry. Writes to `investment-plugin/references/watchlist.json`
+   (v1 schema, shared with `morning-update`). Report stderr back to the user.
+
+5. **If the user declines** — do nothing. Do not record a "rejected" entry.
+
+See `skills/watchlist/SKILL.md` for the full schema and CLI surface.
+
+---
+
 ## Skill Dependency Map
 
 ```
@@ -366,7 +415,8 @@ stock-research (this skill)
 │   └── Research/{ticker}/data_contract.md  ← SINGLE SOURCE OF TRUTH for all quantitative data
 ├── skills/valuation/                   ← DCF + comps + reverse DCF
 ├── skills/quality-scorecard/           ← 5-dimension quality scoring (industry-adaptive)
-└── skills/decision-rules/              ← 4-gate rating engine
+├── skills/decision-rules/              ← 4-gate rating engine
+└── skills/watchlist/                   ← post-research follow-up tracker (Step 11)
 ```
 
 **Key Principles**:
