@@ -110,7 +110,15 @@ python3 investment-plugin/skills/morning-update/scripts/news_fetch.py \
 
 ### Step 7 — 拼装 + 渲染
 
-把 Step 1-6 结果拼成 input JSON v2（schema 见 `references/watchlist-schema.md` 末尾），stdin 给：
+把 Step 1-6 结果拼成 input JSON v2（schema 见 `references/watchlist-schema.md` 末尾）。
+
+**URL 完整性校验（必跑，防止手敲/截断的死链）**：
+
+```bash
+python3 investment-plugin/skills/morning-update/scripts/check_urls.py /tmp/morning_input.json /tmp/news_candidates.json
+```
+
+FAIL 则回到 Step 5 从 candidates JSON 原样复制 URL（禁止从终端截断显示里手抄；WSJ 等 URL 末尾带唯一 hash，截断即 404）。通过后渲染：
 
 ```bash
 cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/scripts/render_report.py > /tmp/morning_report.md
