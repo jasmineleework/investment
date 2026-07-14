@@ -171,7 +171,7 @@ cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/sc
 _生成于 {iso8601} · 扫描 N 条 → 保留 M 条_
 ```
 
-篇幅纪律：全文 2000-2500 中文字（10 分钟）；Part 1 ~30% / Part 2 ~50% / Part 3 ~20%。
+篇幅纪律：全文 2000-2500 中文字（10 分钟内读完）；篇幅配比 Part 1 三成 / Part 2 五成 / Part 3 两成。
 
 ## Error handling
 
