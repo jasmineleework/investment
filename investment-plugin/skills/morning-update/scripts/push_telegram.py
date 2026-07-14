@@ -172,8 +172,12 @@ def _markdown_to_telegram_html(md: str) -> str:
         flags=re.DOTALL,
     )
 
-    # 3. Headings (# / ## / ### …) → bold line. Telegram has no heading concept.
-    s = re.sub(r"^#{1,6}\s+(.+?)\s*$", r"<b>\1</b>", s, flags=re.MULTILINE)
+    # 3. Headings → Telegram has no heading concept.
+    #    h1/h2 (报告题 / Part 标题) → 粗体
+    #    h3+   (小节标题)          → 粗体+下划线，与正文拉开层次
+    # 注意：结尾用 [ \t]* 而非 \s* — MULTILINE 下 \s 会吞掉标题后的空行
+    s = re.sub(r"^#{3,6}[ \t]+(.+?)[ \t]*$", r"<b><u>\1</u></b>", s, flags=re.MULTILINE)
+    s = re.sub(r"^#{1,2}[ \t]+(.+?)[ \t]*$", r"<b>\1</b>", s, flags=re.MULTILINE)
 
     # 4. Inline code `X` → <code>X</code>  (single backtick, no newline inside)
     s = re.sub(r"`([^`\n]+?)`", r"<code>\1</code>", s)
@@ -191,8 +195,9 @@ def _markdown_to_telegram_html(md: str) -> str:
     # 7. Italic _X_ → <i>X</i>  (whole-word, avoid breaking variable_names)
     s = re.sub(r"(?<![A-Za-z0-9_])_([^_\n]+?)_(?![A-Za-z0-9_])", r"<i>\1</i>", s)
 
-    # 8. Horizontal rule --- → blank line
+    # 8. Horizontal rule --- → blank line；随后压缩 3+ 连续空行（避免手机端大片留白）
     s = re.sub(r"^---+\s*$", "", s, flags=re.MULTILINE)
+    s = re.sub(r"\n{3,}", "\n\n", s)
 
     # 9. Bullets — Telegram HTML has no <ul>/<li>; markdown `-` would show as
     #    bare dashes on mobile. Replace with Unicode bullets that mobile fonts

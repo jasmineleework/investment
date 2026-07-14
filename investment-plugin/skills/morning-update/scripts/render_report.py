@@ -43,7 +43,8 @@ E_TRIM = "🔴"
 E_TOP = "🎯"
 E_ERROR = "❌"
 
-STANCE_MARK = {"confirm": "✅ confirm", "challenge": "⚠️ challenge", "neutral": "·"}
+# stance emoji 放条目行首（Telegram 手机端一眼可扫）；neutral 用中性方块
+STANCE_MARK = {"confirm": "✅", "challenge": "⚠️", "neutral": "▫️"}
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +174,7 @@ def elect_top_call(data: dict, buy_signals: list, trim_signals: list) -> str:
 # ---------------------------------------------------------------------------
 
 def render_part1(data: dict) -> str:
-    L = ["## Part 1 — 必读文章", ""]
+    L = ["## Part 1 — 📚 必读文章", ""]
     must = data.get("must_read") or []
     worth = data.get("worth_reading") or []
 
@@ -188,11 +189,12 @@ def render_part1(data: dict) -> str:
 
     if worth:
         L.append("### 值得读")
-        for w in worth:
-            L.append(f"- **[{w.get('title', '')}]({w.get('url', '')})** · {w.get('source', '')}")
-            if w.get("why_cn"):
-                L.append(f"  - {w['why_cn']}")
         L.append("")
+        for w in worth:
+            L.append(f"- **[{w.get('title', '')}]({w.get('url', '')})**")
+            if w.get("why_cn"):
+                L.append(f"  - {w['why_cn']}（{w.get('source', '')}）")
+            L.append("")
 
     if not must and not worth:
         L.append("_今日无必读文章（Citrini 等 must-push 源无新文，精选池为空）_")
@@ -201,24 +203,30 @@ def render_part1(data: dict) -> str:
 
 
 def render_part2(data: dict) -> str:
-    L = ["## Part 2 — 新闻与观点", ""]
+    L = ["## Part 2 — 📰 新闻与观点", ""]
     pulse = data.get("concept_pulse")
     if pulse:
-        L.append("### 概念温度计")
+        L.append("### 🌡 概念温度计")
+        L.append("")
         L.append(pulse)
         L.append("")
     news = data.get("news_curated") or []
     if news:
         L.append(f"### 重点新闻（{len(news)} 条）")
+        L.append("")
         for n in news:
             related = n.get("related", "")
-            mark = STANCE_MARK.get(n.get("stance", "neutral"), "·")
-            L.append(f"- **[{n.get('title', '')}]({n.get('url', '')})** · {n.get('source', '')} · {related} · {mark}")
+            mark = STANCE_MARK.get(n.get("stance", "neutral"), "▫️")
+            # stance emoji 行首 + 标题独占一行；来源并入观点行，避免标题行过长换行
+            head = f"- {mark} **[{n.get('title', '')}]({n.get('url', '')})**"
+            if related:
+                head += f" 「{related}」"
+            L.append(head)
             if n.get("fact_cn"):
                 L.append(f"  - 事实：{n['fact_cn']}")
             if n.get("opinion_cn"):
                 L.append(f"  - 观点：{n['opinion_cn']}")
-        L.append("")
+            L.append("")
     elif not pulse:
         L.append("_今日无 thesis-relevant 新闻_")
         L.append("")
@@ -226,7 +234,7 @@ def render_part2(data: dict) -> str:
 
 
 def render_part3(data: dict) -> str:
-    L = ["## Part 3 — 今日发现", ""]
+    L = ["## Part 3 — 💡 今日发现", ""]
     d = data.get("discovery")
     if not d or d.get("none_today"):
         note = (d or {}).get("scanned_note_cn", "")
@@ -255,7 +263,7 @@ def render_part3(data: dict) -> str:
 
 def render_part4(buy_signals: list, trim_signals: list) -> str:
     """CONDITIONAL — caller only invokes when signals exist."""
-    L = ["## Part 4 — 交易信号", ""]
+    L = ["## Part 4 — 📊 交易信号", ""]
 
     if buy_signals:
         L.append(f"### {E_BUY} Buy Zone")
