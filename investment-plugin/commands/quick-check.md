@@ -5,13 +5,14 @@ argument-hint: "<ticker>"
 
 # /quick-check
 
-Quick valuation screen for a US-listed stock. Produces a mini investment memo covering 5 key dimensions to help decide whether a full /research is warranted. Does NOT give a buy/sell rating.
+Quick valuation screen for a US- or HK-listed stock. Produces a mini investment memo covering 5 key dimensions to help decide whether a full /research is warranted. Does NOT give a buy/sell rating.
 
 ## Usage
 
 ```
 /quick-check TSLA
 /quick-check PLTR
+/quick-check 0700.HK
 ```
 
 ## What This Does

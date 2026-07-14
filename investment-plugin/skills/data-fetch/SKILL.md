@@ -40,7 +40,10 @@ Collect and validate financial data for a given stock ticker. This skill is call
   to the Data Contract's `## Research Supplement` section. Either
   `{peer_set}` or `{topics}` (or both) must be non-empty in supplement
   mode — both empty is a no-op.
-- `{market}` — Market identifier (default: US)
+- `{market}` — Market identifier: `US` (default) or `HK`. Determines source
+  routing below. Ticker format conventions per market are defined in
+  `references/markets/{market}.md` (HK: yfinance uses `0700.HK`, moomoo uses
+  `HK.00700`, AkShare uses `00700` — normalize per that file's conversion table).
 - `{mode}` — One of:
   - `"full"` (default for /research) — initial target fetch; generates the
     Data Contract.
@@ -150,6 +153,21 @@ Data is fetched in priority order. Each tier fills gaps left by previous tiers.
 | Tier 2 | Python scripts | Fill gaps MCP can't cover, or when MCP unavailable |
 | Tier 3 | WebSearch | Qualitative data + anything still missing |
 
+### Market Routing: HK source matrix
+
+For `{market} = HK`, the per-field best source differs from US (quality-first). Use this matrix to decide which sub-steps apply:
+
+| Data Contract field group | Preferred source | Fallback |
+|---------------------------|------------------|----------|
+| Real-time price / market cap / P/E / P/B / turnover | moomoo snapshot script (Step A1c, if OpenD alive) | yfinance MCP (`XXXX.HK`) |
+| Financial statements (annual/interim) | yfinance MCP (`XXXX.HK`) | `akshare_hk_fetch.py` (EastMoney, also used for cross-validation) |
+| Financial indicators / DuPont / dividend history | `akshare_hk_fetch.py` (Step A2d) | WebSearch |
+| Analyst consensus / target price | yfinance MCP + yahoo_fetch.py | WebSearch |
+| Filings full-text / segment data | **ADR bridge** → SEC EDGAR MCP with ADR ticker (20-F/6-K), only if dual-listed per `references/markets/hk.md` ADR Bridge rules | HKEXnews results PDF via WebFetch (Tier 3) |
+| Insider / substantial shareholder activity | HKEXnews Disclosure of Interests via WebSearch (Tier 3) — `N/A (DI checked YYYY-MM-DD, no reportable activity)` is allowed and is NOT a coverage FAIL | — |
+| Risk-free rate (WACC) | By cash-flow currency per `hk.md`: RMB base → China 10Y (`akshare_hk_fetch.py`); HKD/USD base → 10Y UST (`fred_fetch.py`) | WebSearch |
+| Capital flow / southbound (enhancement) | moomoo `get_capital_flow.py` | AkShare hsgt interfaces |
+
 ---
 
 ### Step A1: Tier 1 — MCP Tools (preferred, batched over ALL_TICKERS)
@@ -172,6 +190,8 @@ fields populated in the Data Contract `## Peer Data` table.
 
 #### A1a: Yahoo Finance MCP (price, financials, cash flow)
 
+Works for both US and HK tickers (HK: use `XXXX.HK` format, e.g. `0700.HK`).
+
 Call these tools in parallel **for each ticker in ALL_TICKERS**:
 
 | Tool | Parameters | Data it provides |
@@ -189,7 +209,10 @@ Call these tools in parallel **for each ticker in ALL_TICKERS**:
 
 #### A1b: SEC EDGAR MCP (financials, balance sheet, key metrics)
 
-For US stocks, call these tools in parallel:
+**US stocks**: call with `{ticker}` directly.
+**HK stocks**: SEC EDGAR has no HK coverage. Apply the **ADR Bridge** rule from `references/markets/hk.md`: if the company has a Level 2/3 US listing (WebSearch `"{company_name} ADR NYSE OR NASDAQ 20-F"` confirms 20-F filings), call these tools with the **ADR ticker** — filings tools return 20-F/6-K instead of 10-K/10-Q. If OTC-only or no ADR (e.g. Tencent/TCEHY), **skip this step entirely** and rely on the HK matrix fallbacks; record `ADR Ticker: N/A` in the Data Contract.
+
+Call these tools in parallel:
 
 | Tool | Parameters | Data it provides |
 |------|-----------|-----------------|
@@ -207,7 +230,20 @@ For US stocks, call these tools in parallel:
 | `compare_periods` | `identifier: "{ticker}", metric: "Revenues", start_year: {FY-3}, end_year: {FY}` | Revenue trend with CAGR |
 | `analyze_insider_sentiment` | `identifier: "{ticker}", months: 6` | Insider buy/sell pattern analysis → maps to Data Contract "Insider Activity (180 days)" |
 
-**SEC EDGAR is authoritative for**: balance sheet, historical financials, segment data, insider activity. Its numbers take priority over other sources when conflicts arise.
+**SEC EDGAR is authoritative for**: balance sheet, historical financials, segment data, insider activity. Its numbers take priority over other sources when conflicts arise. (For HK-with-ADR, 20-F data is authoritative for segment/risk disclosures; statement-level numbers should still be cross-checked against the HK-listed entity's own results announcement since the 20-F may lag.)
+
+#### A1c: moomoo snapshot (HK only — broker-grade real-time quote)
+
+**Skip if `{market}` = US.** For HK, moomoo OpenAPI (local scripts, requires OpenD running) provides real-time price, total/circulating market cap, P/E, P/E-TTM, P/B, turnover rate, and suspension status — fresher than yfinance's delayed HK quotes.
+
+```bash
+python3 moomoo-skills/skills/moomooapi/scripts/quote/get_snapshot.py HK.{5-digit code}
+# e.g. python3 moomoo-skills/skills/moomooapi/scripts/quote/get_snapshot.py HK.00700
+```
+
+- **If the script errors (OpenD not running / not installed)**: do NOT block or prompt the user — silently fall back to yfinance MCP for these fields and note "moomoo unavailable, yfinance used" in Data Quality Notes.
+- When both succeed, moomoo takes priority for quote-level fields; yfinance remains the source for statements.
+- Optional enhancement (full mode): `get_capital_flow.py HK.{code}` for capital flow / southbound context.
 
 ---
 
@@ -244,14 +280,14 @@ python3 yahoo_fetch.py {ticker}
 **If MCP was unavailable**: This script becomes the primary data source for everything.
 **If the script fails**: Note in Data Quality Notes, continue with remaining sources.
 
-#### A2b: SEC EDGAR script (only if SEC MCP unavailable)
+#### A2b: SEC EDGAR script (US only; only if SEC MCP unavailable)
 
 ```bash
 cd {skill_root}/scripts
 python3 sec_edgar_fetch.py {ticker}
 ```
 
-**Skip if SEC MCP already returned data.** Only run as fallback.
+**Skip if SEC MCP already returned data, or if `{market}` = HK** (for HK-with-ADR, the MCP path in A1b is the only SEC route; this script does not handle ADR mapping).
 
 #### A2c: FRED script (macro data for WACC)
 
@@ -260,12 +296,35 @@ cd {skill_root}/scripts
 python3 fred_fetch.py
 ```
 
-No MCP exists for FRED data. This script is always needed for the risk-free rate.
+No MCP exists for FRED data.
+
+**Risk-free rate routing** (per `references/markets/{market}.md` WACC rules):
+- `US` → always run this script (10Y UST).
+- `HK` → depends on the company's cash-flow currency: HKD/USD revenue base → run this script (HKD is USD-pegged); RMB revenue base (e.g. Tencent, Meituan) → use the China 10Y yield from `akshare_hk_fetch.py` (A2d) instead. Record which rule was applied in the Data Contract WACC Inputs.
 
 **If script fails**: Use WebSearch:
 ```
 WebSearch: "10 year US treasury yield today"
+WebSearch: "china 10 year government bond yield today"   (HK/RMB case)
 ```
+
+#### A2d: AkShare HK script (HK only — indicators, DuPont, dividends, CN yield)
+
+**Skip if `{market}` = US.**
+
+```bash
+cd {skill_root}/scripts
+pip install -q -r requirements.txt
+python3 akshare_hk_fetch.py {5-digit code}   # e.g. python3 akshare_hk_fetch.py 00700
+```
+
+**Purpose** (EastMoney-sourced, free): fields neither yfinance nor moomoo cover well for HK:
+- Key financial indicators (ROE decomposition / DuPont, growth, solvency)
+- Financial statements from EastMoney — use to **cross-validate** yfinance statement numbers; discrepancies > 2% must be flagged in Data Quality Notes
+- Dividend history (HK companies are dividend-heavy; needed for total-return math)
+- China & US 10Y government bond yields (WACC input per the routing above)
+
+**If the script fails** (EastMoney flakiness): retry once; then fall back to WebSearch and note the gap. Do not block.
 
 ---
 
@@ -280,6 +339,14 @@ WebSearch: "{ticker} competitive landscape market share"
 ```
 
 **Purpose**: MCP and scripts give you numbers; WebSearch gives you narrative, context, and sentiment.
+
+**Additional HK queries** (if `{market}` = HK):
+```
+WebSearch: "{company_name} site:hkexnews.hk annual report results announcement"
+WebSearch: "{ticker} 港交所 公告 业绩"
+WebSearch: "{company_name} disclosure of interests substantial shareholder HKEX"
+```
+For filings full-text, WebFetch the results announcement PDF from HKEXnews (Title Search: https://www1.hkexnews.hk/search/titlesearch.xhtml). For insider data, if the DI search surfaces no reportable activity, record `N/A (DI checked YYYY-MM-DD, no reportable activity)` — allowed, not a FAIL.
 
 Also use WebSearch to fill any Data Contract fields still blank after Tiers 1-2 (e.g., forward estimates, peer comparisons).
 
@@ -312,6 +379,11 @@ WebSearch: "{ticker} dividend yield buyback shareholder return"
 ```
 WebSearch: "10 year US treasury yield today {current_year}"
 WebSearch: "{ticker} beta cost of equity WACC"
+```
+
+If `{market}` = HK with an RMB revenue base, additionally:
+```
+WebSearch: "china 10 year government bond yield today {current_year}"
 ```
 
 ### Step B3: Qualitative Context (full mode only)
@@ -424,19 +496,17 @@ Use the template and rules defined in `references/data_contract.md` to build the
 
 ---
 
-## Step 4: SEC EDGAR Filing Search (full mode only)
+## Step 4: Regulatory Filing Search (full mode only)
 
 **If `{mode}` = "quick"**: Skip.
 
-**If Environment = "mcp"**: SEC filing data was already fetched via MCP in Step A1b. Use WebSearch only for supplemental filing context:
-```
-WebSearch: "site:sec.gov {ticker} 10-K 10-Q {current_year}"
-```
+**US** — SEC EDGAR:
+- Environment = "mcp": filing data already fetched via MCP in Step A1b. Use WebSearch only for supplemental context.
+- Otherwise WebSearch: `"site:sec.gov {ticker} 10-K 10-Q {current_year}"`
 
-**If Environment = "claude-code" or "cowork"**: Only WebSearch is available:
-```
-WebSearch: "site:sec.gov {ticker} 10-K 10-Q {current_year}"
-```
+**HK** — HKEXnews (+ ADR bridge):
+- If ADR bridge active (A1b): 20-F/6-K already fetched via SEC EDGAR MCP.
+- Always: WebSearch `"site:hkexnews.hk {company_name} annual report {current_year}"` and WebFetch the latest results announcement PDF for segment disclosures, accounting policies, and risk factors (HK reports full statements semi-annually; Q1/Q3 are abbreviated — note the reporting cadence in Data Quality Notes).
 
 Note key filing dates and extract risk factors, segment disclosures, and accounting policies.
 
@@ -455,7 +525,7 @@ Build the Coverage Log and check against thresholds:
 | Data Contract fields populated | >= 80% (mcp/claude-code) / >= 50% (cowork) | Note gaps in Data Quality Notes |
 | Sources dated within 12 months | >= 50% | Prioritize recent sources |
 
-**Source Types**: SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
+**Source Types**: Regulatory Filings (SEC EDGAR for US; HKEXnews for HK) / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert
 
 ### Coverage Log Format
 
