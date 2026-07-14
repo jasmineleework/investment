@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "comment": "RSS 源清单。must_push=true 的源（如 Citrini）有新文章一律推送、跳过关键词过滤。category: general|opinion|macro|ticker_template。weight 越高去重时越优先保留。用户可自行追加 Substack/博客。",
+  "feeds": [
+    {
+      "id": "citrini",
+      "name": "Citrini Research",
+      "url": "https://www.citriniresearch.com/feed",
+      "weight": 10,
+      "category": "opinion",
+      "must_push": true,
+      "enabled": true
+    },
+    {
+      "id": "cnbc-markets",
+      "name": "CNBC Markets",
+      "url": "https://www.cnbc.com/id/15839069/device/rss/rss.html",
+      "weight": 8,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "cnbc-tech",
+      "name": "CNBC Technology",
+      "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
+      "weight": 8,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "cnbc-earnings",
+      "name": "CNBC Earnings",
+      "url": "https://www.cnbc.com/id/15839135/device/rss/rss.html",
+      "weight": 7,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "mw-topstories",
+      "name": "MarketWatch Top Stories",
+      "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+      "weight": 7,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "mw-realtime",
+      "name": "MarketWatch Real-time Headlines",
+      "url": "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",
+      "weight": 6,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "mw-marketpulse",
+      "name": "MarketWatch Market Pulse",
+      "url": "https://feeds.content.dowjones.io/public/rss/mw_marketpulse",
+      "weight": 6,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "wsj-markets",
+      "name": "WSJ Markets",
+      "url": "https://feeds.content.dowjones.io/public/rss/RSSMarketsMain",
+      "weight": 9,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "wsj-tech",
+      "name": "WSJ Technology",
+      "url": "https://feeds.content.dowjones.io/public/rss/RSSWSJD",
+      "weight": 9,
+      "category": "general",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "yahoo-ticker",
+      "name": "Yahoo Finance",
+      "url_template": "https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}",
+      "weight": 5,
+      "category": "ticker_template",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "sa-market-currents",
+      "name": "Seeking Alpha Market Currents",
+      "url": "https://seekingalpha.com/market_currents.xml",
+      "weight": 6,
+      "category": "opinion",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "sa-ticker",
+      "name": "Seeking Alpha",
+      "url_template": "https://seekingalpha.com/api/sa/combined/{ticker}.xml",
+      "weight": 6,
+      "category": "ticker_template",
+      "must_push": false,
+      "enabled": true
+    },
+    {
+      "id": "nasdaq-markets",
+      "name": "NASDAQ Markets",
+      "url": "https://www.nasdaq.com/feed/rssoutbound?category=Markets",
+      "weight": 4,
+      "category": "general",
+      "must_push": false,
+      "enabled": false
+    }
+  ],
+  "macro_keywords": [
+    "Fed", "FOMC", "Powell", "CPI", "PPI", "PCE", "inflation",
+    "rate cut", "rate hike", "interest rate", "Treasury yield",
+    "tariff", "trade war", "jobs report", "nonfarm", "unemployment",
+    "GDP", "recession", "stimulus", "debt ceiling"
+  ]
+}

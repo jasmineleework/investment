@@ -89,3 +89,44 @@ For reference — these are the regex anchors memo_loader.py uses against `Resea
 | Catalyst row | `^\|\s*(\d{4}-\d{2}-\d{2})(?:\s*\([^)]*\))?\s*\|\s*([^|]+?)\s*\|` |
 
 If you change memo template formatting, update these anchors and re-run on a known memo (e.g. `Research/MU/2026-05-10_memo.md`) to verify the parser still works.
+
+## Render input schema v2 (render_report.py)
+
+Assembled by the orchestrating Claude session in Step 7 and piped to `render_report.py` via stdin:
+
+```json
+{
+  "date": "2026-07-14",
+  "fetched_at": "2026-07-14T08:00:00+08:00",
+  "top_call": null,
+  "must_read": [
+    {"title": "...", "url": "...", "source": "Citrini Research",
+     "summary_cn": "3-5 句核心论点", "watchlist_link_cn": "与 watchlist 的关联"}
+  ],
+  "worth_reading": [
+    {"title": "...", "url": "...", "source": "Seeking Alpha", "why_cn": "为什么值得读"}
+  ],
+  "concept_pulse": "概念温度计段落",
+  "news_curated": [
+    {"title": "...", "url": "...", "source": "CNBC", "related": "AVGO",
+     "fact_cn": "1 句事实", "opinion_cn": "2-3 句 so-what",
+     "stance": "confirm|challenge|neutral"}
+  ],
+  "discovery": {
+    "type": "concept|ticker", "name": "...", "tickers": ["..."],
+    "what_cn": "...", "why_cn": "...", "difference_cn": "...",
+    "next_step_cn": "/research XXX",
+    "source_articles": [{"title": "...", "url": "..."}]
+  },
+  "positions": [],
+  "watchlist": [{"ticker": "AVGO", "current_price": 200.0, "notes": "..."}],
+  "memos": {"AVGO": {"_status": "ok", "buy_zone": [187, 215], "trim_zone": [320, 380]}},
+  "portfolio_unavailable": false,
+  "stats": {"news_scanned": 668, "news_kept": 8}
+}
+```
+
+Notes:
+- `discovery` may instead be `{"none_today": true, "scanned_note_cn": "..."}`
+- Trade signals are **computed inside render_report.py** from positions/watchlist/memos — Part 4 renders only when a buy/trim signal triggers
+- Watchlist entries without a memo fall back to a `买入区 $X–Y` pattern in `notes` (flagged `*zone 来自 notes` in the report)
