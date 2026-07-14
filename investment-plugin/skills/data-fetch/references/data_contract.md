@@ -6,8 +6,8 @@
 
 ## Data Contract Rules
 
-1. **Every numeric field must cite its source** (SEC EDGAR MCP, Yahoo Finance MCP, yahoo_fetch.py, fred_fetch.py, specific WebSearch result).
-2. **Source priority for conflicts**: SEC EDGAR MCP > Yahoo Finance MCP > Python scripts (yahoo_fetch.py / sec_edgar_fetch.py) > WebSearch.
+1. **Every numeric field must cite its source** (SEC EDGAR MCP, Yahoo Finance MCP, yahoo_fetch.py, fred_fetch.py, akshare_hk_fetch.py, moomoo snapshot, specific WebSearch result).
+2. **Source priority for conflicts**: US — SEC EDGAR MCP > Yahoo Finance MCP > Python scripts (yahoo_fetch.py / sec_edgar_fetch.py) > WebSearch. HK — moomoo snapshot (quote-level fields) > Yahoo Finance MCP (statements) > akshare_hk_fetch.py (indicators/dividends; statement cross-validation) > WebSearch. Statement discrepancies >2% between yfinance and AkShare must be flagged in Data Quality Notes.
 3. **Leave fields blank rather than guessing** — blank fields signal to downstream writers that data is unavailable.
 4. **The Data Contract is append-only during a single research run** — no skill may modify or delete existing rows. Skills may APPEND new rows (e.g., supplemental peer rows) but never overwrite. The report (memo) is a filtered view of the Contract: it may exclude individual peer rows via "Outlier Exclusions" subsections, but the Contract retains every fetched row as audit record.
 5. **Append exceptions** (the only sources of new content after initial generation):
@@ -31,7 +31,9 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 |-------|-------|--------|
 | Company Name | {name} | |
 | Ticker | {ticker} | |
-| Exchange | {exchange} | |
+| Exchange | {exchange: NYSE/NASDAQ/AMEX/HKEX} | |
+| Reporting Currency | {currency; HK: note trading currency HKD vs reporting currency (often RMB) + FX rate used} | |
+| ADR Ticker | {HK only: ADR ticker if Level 2/3 dual-listed, else "N/A (OTC or none)"; US: omit row} | |
 | Sector / Industry | {sector} / {industry} | |
 | Market Cap | ${X}B | |
 | Enterprise Value | ${X}B | |
@@ -119,6 +121,13 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 | QoQ Net Institutional Change | +/- X% | MCP / yahoo_fetch.py |
 
 ## Insider Activity (180 days)
+
+> **HK rule**: HKEX has no free programmatic Form-4 equivalent. Source is HKEXnews
+> Disclosure of Interests (Tier 3 WebSearch). If no reportable activity is found,
+> fill fields with `N/A (DI checked YYYY-MM-DD, no reportable activity)` — this
+> does NOT count as a coverage FAIL. Same convention applies to Institutional
+> Ownership fields that yfinance lacks for HK listings.
+
 | Field | Value | Source |
 |-------|-------|--------|
 | Net Insider Sentiment | Net Buyer / Net Seller / Neutral | SEC EDGAR MCP |
@@ -133,7 +142,7 @@ Sources: {list of data sources used: Yahoo Finance API, SEC EDGAR, FRED, WebSear
 ## WACC Inputs
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| Risk-Free Rate | % | 10Y UST |
+| Risk-Free Rate | % | US: 10Y UST (fred_fetch.py). HK: by cash-flow currency per `references/markets/hk.md` — RMB base → China 10Y (akshare_hk_fetch.py); HKD/USD base → 10Y UST. State which rule applied. |
 | Beta | | {source} |
 | Equity Risk Premium | % | |
 | Cost of Equity | % | CAPM |

@@ -33,9 +33,11 @@ Cross-checked valuation using three methods: Comparable Company Analysis, DCF, a
 **所有用于估值的财务数据（财报项、倍数、市值、债务、beta、margin、growth 等）必须来自实时数据源**，绝不允许"市场公开近似值"、"约莫"、"业界常见"、"估计"等措辞。
 
 ### 数据来源优先级（严格执行）
-1. **Tier 1**: yfinance MCP / SEC EDGAR MCP（实时）
-2. **Tier 2**: yahoo_fetch.py / sec_edgar_fetch.py（脚本拉取）
+1. **Tier 1**: yfinance MCP / SEC EDGAR MCP（实时；SEC EDGAR 仅 US 或 HK-with-ADR-bridge，见 `references/markets/hk.md`）
+2. **Tier 2**: yahoo_fetch.py / sec_edgar_fetch.py（US）/ akshare_hk_fetch.py（HK：指标、分红、中美 10Y 收益率）
 3. **Tier 3**: WebSearch（仅限不可量化的定性分析，**禁止用于数值字段**）
+
+**HK 无风险利率规则**：按现金流货币定（`references/markets/hk.md` WACC Inputs 节）——RMB 收入主体用中国 10Y 国债（akshare_hk_fetch.py `bondYields.china10Y`），HKD/USD 主体用 10Y UST。Data Contract WACC Inputs 必须注明适用了哪条规则。
 
 ### 禁止行为
 - ❌ 在 peer comp 表中填入 "~3.5x"、"约 ~22x" 这类近似值并标注"市场公开近似值"

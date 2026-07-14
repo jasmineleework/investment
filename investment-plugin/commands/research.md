@@ -5,7 +5,7 @@ argument-hint: "<ticker> [cn/en]"
 
 # /research
 
-Generate a comprehensive investment research memorandum for a US-listed stock.
+Generate a comprehensive investment research memorandum for a US- or HK-listed stock.
 
 ## Usage
 
@@ -13,12 +13,14 @@ Generate a comprehensive investment research memorandum for a US-listed stock.
 /research AAPL
 /research NVDA cn
 /research TSLA en
+/research 0700.HK
+/research 700 cn
 ```
 
 ## What This Does
 
-1. Verifies the ticker and detects your language preference
-2. Collects financial data from Yahoo Finance, web sources (60+), SEC EDGAR, and FRED
+1. Verifies the ticker, routes to the market config (US / HK), and detects your language preference
+2. Collects financial data from Yahoo Finance, web sources (60+), and market-specific sources (US: SEC EDGAR + FRED; HK: moomoo + AkShare + HKEXnews, with SEC EDGAR via ADR bridge for dual-listed names)
 3. Analyzes the company across 21 structured sections
 4. Scores business quality (5-dimension Quality Scorecard, 0-100)
 5. Values the stock (DCF + Comparable Companies + Reverse DCF)

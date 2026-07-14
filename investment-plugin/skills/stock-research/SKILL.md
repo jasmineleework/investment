@@ -1,35 +1,44 @@
 ---
 name: stock-research
 description: >
-  US stock deep research and investment memo generation.
+  US and HK stock deep research and investment memo generation.
   Triggers when the user asks to analyze, research, or evaluate
-  a US stock (e.g., "analyze AAPL", "research Tesla",
-  "帮我分析英伟达", "NVDA deep dive", "美股研报").
+  a US or Hong Kong stock (e.g., "analyze AAPL", "research Tesla",
+  "帮我分析英伟达", "NVDA deep dive", "美股研报",
+  "分析腾讯", "0700.HK", "港股研报").
   Produces a comprehensive investment memorandum with
   Buy/Hold/Sell rating following institutional standards.
 ---
 
 # Stock Research — Main Orchestrator
 
-Generate institutional-grade investment memos for US-listed stocks. This skill orchestrates data-fetch, quality-scorecard, valuation, and decision-rules skills to produce a complete, decision-ready research memorandum.
+Generate institutional-grade investment memos for US- and HK-listed stocks. This skill orchestrates data-fetch, quality-scorecard, valuation, and decision-rules skills to produce a complete, decision-ready research memorandum.
 
 ---
 
-## Step 1: Stock Ticker Confirmation
+## Step 1: Stock Ticker Confirmation & Market Routing
 
-Parse user input to identify the target stock:
+Parse user input to identify the target stock and its market:
 
-**Single clear ticker** (e.g., "AAPL", "$TSLA", "苹果公司"):
-- Use WebSearch to verify: `"{ticker} stock NYSE OR NASDAQ"`
-- Confirm full company name, exchange, and ticker
-- Set `{market}` = `US` (Phase 1 only supports US)
+**Market detection** (from ticker shape or company identity):
+
+| Input pattern | Market | Canonical ticker |
+|---------------|--------|------------------|
+| Plain alpha (e.g., `AAPL`, `$TSLA`) | US | As-is (e.g., `AAPL`) |
+| 3–5 digits, `.HK` suffix, or `HK.` prefix (e.g., `700`, `0700.HK`, `HK.00700`) | HK | `XXXX.HK` per `references/markets/hk.md` conversion rules |
+| Company name (e.g., "苹果公司", "腾讯") | Resolve via WebSearch to primary listing | Per resolved market |
+
+**Single clear ticker**:
+- Use WebSearch to verify per the market's validation rule (`references/markets/{market}.md` → Ticker Validation Rules), e.g. `"{ticker} stock NYSE OR NASDAQ"` for US, `"{ticker} stock HKEX"` for HK
+- Confirm full company name, exchange, and canonical ticker
+- Set `{market}` accordingly (supported: `US`, `HK`)
 - Proceed to Step 2
 
 **Multiple tickers**: List all detected, ask user to select ONE.
 
-**Ambiguous input**: Ask user to specify a single company and ticker.
+**Ambiguous input**: Ask user to specify a single company and ticker. For dual-listed companies (e.g., Alibaba = BABA + 9988.HK), default to the listing the user named; if unclear, ask.
 
-**Validation**: Confirm valid US-listed equity (NYSE/NASDAQ/AMEX). Reject OTC, foreign-only, or delisted tickers with explanation.
+**Validation**: Confirm valid listed equity per the market's Ticker Validation Rules. Reject delisted tickers and markets without a `references/markets/{market}.md` config, with explanation.
 
 ---
 
@@ -43,22 +52,22 @@ Parse user input to identify the target stock:
 
 ### 2b. Load Parameters
 
-Read `references/markets/us.md` (contains both market config and decision thresholds) to set:
+Read `references/markets/{market}.md` (contains both market config and decision thresholds) to set:
 
-| Variable | Value |
-|----------|-------|
+| Variable | Source |
+|----------|--------|
 | {stock_name} | Confirmed company name |
-| {stock_ticker} | Confirmed ticker |
+| {stock_ticker} | Confirmed canonical ticker |
 | {output_language} | Detected language |
-| {market} | US |
-| {benchmark} | S&P 500 |
-| {currency} | USD |
-| {MOS_%} | 25% |
-| {SKEW_X} | 1.7× |
-| {QUALITY_PASS} | 70 |
-| {QUALITY_SELL} | 60 |
-| {HURDLE_TR_%} | 30% |
-| {HORIZON} | 24 months |
+| {market} | From Step 1 (`US` or `HK`) |
+| {benchmark} | Market file (US: S&P 500; HK: Hang Seng Index) |
+| {currency} | Market file (US: USD; HK: HKD — also record reporting currency per hk.md) |
+| {MOS_%} | Market file (default 25%) |
+| {SKEW_X} | Market file (default 1.7×) |
+| {QUALITY_PASS} | Market file (default 70) |
+| {QUALITY_SELL} | Market file (default 60) |
+| {HURDLE_TR_%} | Market file (default 30%) |
+| {HORIZON} | Market file (default 24 months) |
 
 ---
 
@@ -164,7 +173,7 @@ Purpose: Complete company-level deep analysis before valuation, so §20's DCF/Co
 
 Read and execute `skills/valuation/SKILL.md` with:
 - Data Contract path: `Research/{ticker}/data_contract.md` (contains target rows + `## Peer Data` populated in Step 4.5)
-- Market config from `references/markets/us.md`
+- Market config from `references/markets/{market}.md`
 
 **§20 must include all 5 sub-sections**: 20a (Comps with statistical summary rows), 20b (DCF with Sanity Check table), 20c (Reverse DCF), 20d (Fair Value Synthesis with Football Field + Scenario Valuation Table), 20e (Consensus Comparison). See `investment_memo.md` for detailed requirements.
 
@@ -195,7 +204,7 @@ Purpose: Ensure thesis is data-driven and valuation-anchored, not narrative-driv
    - Valuation outputs from §20 (Fair Value Range, Buy/Trim Zones)
    - Scenario parameters from §21 (Bear/Base/Bull per-scenario returns, probabilities, E[TR], catalysts)
    - Quality Score from quality-scorecard
-   - Thresholds from `references/markets/us.md`
+   - Thresholds from `references/markets/{market}.md`
    Output feeds into Executive Summary Gate table, NOT a standalone section.
 
 ---
@@ -295,7 +304,7 @@ Verify all required components exist: Executive Summary (Rating Box with Gate ta
 
 Review the Coverage Log and Validator from data-fetch:
 - Total unique sources ≥ 30
-- Source types covered ≥ 4 of 6 (SEC Filings / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert)
+- Source types covered ≥ 4 of 6 (Regulatory Filings [SEC EDGAR for US; HKEXnews for HK] / Earnings-IR / Industry Report / Quality Media / Competitor Primary / Academic-Expert)
 - MCP data populated ≥ 80% of Data Contract fields
 - Sources within 12 months ≥ 50%
 
@@ -391,7 +400,7 @@ enter the watchlist.
    ```bash
    python3 investment-plugin/skills/watchlist/scripts/watchlist_io.py add {ticker} \
        --name "{company_name}" \
-       --market US \
+       --market {market} \
        --notes "{user_notes_or_empty}"
    ```
 
