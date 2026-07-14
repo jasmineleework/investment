@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "last_updated": "2026-07-14",
+  "comment": "watchlist 背后的概念/主题关键词，morning-update 新闻匹配用。用户自行维护；/research 出现新主题时建议追加。",
+  "concepts": [
+    {
+      "id": "tpu-supply-chain",
+      "name": "TPU 供应链",
+      "keywords": [
+        "TPU", "Google chip", "Google silicon", "Broadcom ASIC",
+        "custom silicon", "custom AI chip", "OCS",
+        "optical circuit switch", "co-packaged optics", "optical transceiver",
+        "800G", "1.6T"
+      ],
+      "related_tickers": ["AVGO", "COHR", "CLS", "LITE", "GOOGL"]
+    },
+    {
+      "id": "ai-datacenter-infra",
+      "name": "AI 数据中心与电力",
+      "keywords": [
+        "data center power", "datacenter power", "AI capex",
+        "hyperscaler capex", "AI infrastructure", "power grid",
+        "HPC hosting", "GPU cloud", "neocloud", "AI data center",
+        "electricity demand", "nuclear power deal", "power purchase agreement"
+      ],
+      "related_tickers": ["ETN", "CORZ", "WULF", "CRWV"]
+    }
+  ]
+}

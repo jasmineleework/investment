@@ -1,26 +1,28 @@
 ---
 name: morning-update
 description: >
-  Generate a 2-minute pre-market briefing combining live moomoo holdings,
-  watchlist signals, news/catalysts, and price-zone actions. Read-only — does
-  not place trades. Optionally pushes to an independent Telegram bot.
-  Designed to be triggered by /morning slash command or a scheduled task.
-allowed-tools: Bash Read Write Edit
+  Generate a 10-minute morning briefing: curated news + opinions for watchlist
+  tickers and concepts (RSS aggregation incl. must-push sources like Citrini
+  Research), one daily discovery idea with source article, and conditional
+  buy/trim trade signals. Read-only — does not place trades. Optionally pushes
+  to an independent Telegram bot. Triggered by /morning or a scheduled task.
+allowed-tools: Bash Read Write Edit WebFetch WebSearch
 ---
 
 # morning-update
 
-每个交易日早晨自动产出一份 **2 分钟可读完** 的盘前备忘，回答用户最关心的三件事：
+每个交易日产出一份 **10 分钟可读完** 的晨间简报，回答四件事：
 
-1. 持仓里有没有事？哪些进了 Buy/Trim Zone？
-2. Watchlist 里谁触发了催化剂？谁进了买入区间？
-3. 哪只是今天最该 act 的（Top Call）？
+1. 今天有哪些**必读文章**？（Citrini Research 等 must-push 源有新文一定推）
+2. watchlist 标的和背后概念（TPU 供应链、AI infra …）今天有什么**重点新闻 + 我们的观点**？
+3. 市场上有没有一个**我还没发现**的概念/标的值得研究？（每天 1 个，必须附文章）
+4. 有没有**交易信号**？（watchlist 进 Buy Zone / 持仓进 Trim Zone —— 有才出现）
 
 ## When to invoke
 
-- 用户输入 `/morning`、"morning update"、"盘前简报"、"开盘前检查"
-- Scheduled task `morning-update` fire（cron `0 8 * * 1-5` SGT，每个工作日 8:00 AM）
-- 下游 skill 需要一份"持仓 + watchlist + 信号"的拼装结果
+- 用户输入 `/morning`、"morning update"、"晨报"、"盘前简报"
+- Scheduled task fire（每天北京时间 08:00 复盘视角 + 21:30 美股开盘视角）
+- 下游 skill 需要一份"新闻 + 信号"拼装结果
 
 ## Arguments
 
@@ -28,239 +30,184 @@ allowed-tools: Bash Read Write Edit
 |------|------|------|
 | `--dry-run` | 本地生成 markdown，**不推送** Telegram | off |
 | `--push` | 推送到独立 Telegram bot | off（dry-run 默认） |
-| `focus:<TICKER>` | 对某只做更深的 thesis 比对（多新闻源） | none |
+| `focus:<TICKER>` | 只对某只做深挖 | none |
 
 无参数时等价 `--dry-run`。
 
 ## Prerequisites
 
-1. **moomoo OpenD GUI** 运行中且行情/交易双登录绿（参考 `investment-plugin/skills/portfolio-fetch/SKILL.md`）。OpenD 没启动也能跑，但报告会标"持仓数据不可用"。
-2. **独立 Telegram bot**（推送时需要）：用户已通过 BotFather 创建独立 bot，并在 `~/.claude/channels/morning-update/.env` 配置 `MORNING_BOT_TOKEN` + `MORNING_CHAT_ID`（用 `grab_chat_id.py` 自动写）。
-3. **Python SDK** `moomoo-api>=10.5.6508`（portfolio-fetch 已依赖）。
+1. **moomoo OpenD GUI**（可选）：没启动也能跑，交易信号只覆盖 watchlist，报告头标注。
+2. **独立 Telegram bot**（推送时需要）：`~/.claude/channels/morning-update/.env` 配置 `MORNING_BOT_TOKEN` + `MORNING_CHAT_ID`。
+3. 网络可达 RSS 源（`references/feeds.json`）。
 
 ## Execution flow
 
-按 6 个 step 顺序执行。**禁止跳步**或并行。
+按 8 个 step 顺序执行。Step 1 失败不阻塞。
 
-### Step 1 — 拉持仓
+### Step 1 — 拉持仓（可选，用于 trim 信号）
 
 ```bash
 python3 investment-plugin/skills/portfolio-fetch/scripts/fetch_portfolio.py --json > /tmp/portfolio.json 2>/tmp/portfolio.err
 ```
 
-- 成功（exit 0）→ 解析 JSON，取 `positions[]` + `funds` + `summary` + `weights`
-- 失败（OpenD 没启动等）→ 标记 `portfolio_unavailable = true`，**继续后续 step**（Part 1 + Part 3 仍可跑，但 Part 2 跳过并在报告头写错误）
-- positions[].code 去前缀（`US.NVDA` → `NVDA`）后用于合并 universe
+- 成功 → 取 `positions[]`（只需要 code / nominal_price / snapshot.last_price）
+- 失败 → `portfolio_unavailable = true`，**继续**（交易信号只覆盖 watchlist）
 
-### Step 2 — 读 watchlist + 合并 universe
+### Step 2 — 读 watchlist + concepts
 
-读 `investment-plugin/references/watchlist.json`（schema 见 `references/watchlist-schema.md`）。
+- `investment-plugin/references/watchlist.json`（损坏则 abort + error，不静默）
+- `investment-plugin/references/concepts.json`（概念关键词；不存在视为空）
+- `universe = {positions} ∪ {watchlist}`；`focus:<TICKER>` 时限定
 
-- 文件不存在 → 视为空 watchlist
-- JSON 损坏 → **abort + 推送一条 error 消息 + exit 1**（避免静默丢数据）
-- 合并：`universe = {positions[].code (stripped)} ∪ {watchlist[].ticker}`，每个 ticker 打 flag：
-  - `holding` — 只在 positions
-  - `watching` — 只在 watchlist
-  - `both` — 两边都有
-
-如果指定 `focus:<TICKER>`，universe 限定到该 ticker（其它静默跳过）。
-
-### Step 3 — 加载 memo + 抽取信号
+### Step 3 — memo 抽 zone
 
 ```bash
 python3 investment-plugin/skills/morning-update/scripts/memo_loader.py \
-  --tickers NVDA,GOOGL,MU,AMZN \
-  --max-catalyst-days 30 \
-  --json > /tmp/memos.json
+  --tickers <universe CSV> --max-catalyst-days 30 --json > /tmp/memos.json
 ```
 
-每个 ticker 返回：
-- `buy_zone: [low, high]` / `trim_zone: [low, high]` / `fair_value_mid` — 来自 memo §20
-- `pillars: [first_pillar_sentence]` — 来自 memo §1 论点框架
-- `catalysts: [{date, event, importance}]` — 来自 memo §21d（≤30 天且日期升序前 1-2 条）
-- `memo_path` / `memo_date`
-- `_status: "no_memo"` if 没找到
+无 memo 的 watchlist 标的由渲染脚本从 notes 里 fallback 提取买入区（如 "买入区 $95–110"）。
 
-### Step 4 — 拉新闻 / 评级 / 8-K（MCP，每个 ticker 并行）
+### Step 4 — RSS 聚合
 
-对 universe 里每个 ticker，并行调（用一条 message 里多个 tool call）：
+```bash
+python3 investment-plugin/skills/morning-update/scripts/news_fetch.py \
+  --tickers <universe CSV> --hours 24 --json > /tmp/news_candidates.json
+```
 
-| Tool | 用途 | 过滤 |
-|------|------|------|
-| `mcp__yfinance__get_news` | 隔夜新闻 | ≤24h；保留前 3 条 |
-| `mcp__yfinance__get_recommendations` | 评级变动 | 近 7 天 |
-| `mcp__sec-edgar__get_recent_filings` | 8-K | form_type=`"8-K"`, days=2 |
-| `mcp__yfinance__get_current_stock_price` | **watching 类**当前价 | — |
+输出四桶：
+- `must_push` — Citrini 等 must-push 源新文章（48h 窗口、跳过关键词过滤）
+- `matched` — 按 ticker / concept id 分组的命中新闻
+- `macro` — 宏观关键词命中
+- `unmatched_hot` — 高热度未匹配标题簇（Discovery 素材）
 
-`holding` 的当前价来自 portfolio-fetch snapshot（不重复拉）。
+补充（少量 MCP）：
+- 持仓 ticker：`mcp__sec-edgar__get_recent_filings`（form_type="8-K", days=2）
+- 某信号 ticker 在 `matched` 里为空时：fallback `mcp__yfinance__get_news`
 
-每条新闻做一次"我们的观点"判断：基于该 ticker memo §1 的 pillars，标 `confirm` / `challenge` / `noise`，**noise 丢弃**。
+### Step 5 — LLM 策展（观点生成）
 
-### Step 5 — 信号判断 + 渲染
+读 `/tmp/news_candidates.json` + memos（§1 pillars）+ watchlist notes，产出：
 
-把前面的 dict 拼成一个完整 input JSON，stdin 给渲染脚本：
+1. **must_read**：每篇 must_push 文章，用 WebFetch 抓正文写 3-5 句核心论点摘要 + 与 watchlist 的关联（付费墙截断时基于可见部分并注明）。**must_push 桶里的文章一篇都不能丢。**
+2. **worth_reading**：从 opinion 源（Seeking Alpha 等）+ matched 桶挑 1-3 篇值得读的深度内容，每篇写"为什么值得读"。
+3. **news_curated**：5-8 条重点新闻，优先级 challenge thesis > 概念级事件 > confirm；每条写 1 句事实 + 2-3 句观点（so-what），标 stance（confirm/challenge/neutral）。
+4. **concept_pulse**：3-5 句概念温度计综述（TPU 供应链 / AI 电力等今天整体动向）。
+
+去重纪律：同一事件多源报道只保留一条（选最权威源）。
+
+### Step 6 — Discovery（每天 1 个新 idea）
+
+1. `python3 investment-plugin/skills/morning-update/scripts/discovery_log.py list --days 30` → 近 30 天已推荐
+2. 排除集 = holdings ∪ watchlist ∪ 已推荐
+3. 从 `unmatched_hot` 标题簇出发，必要时 1-2 次 WebSearch 验证（如 `"<keyword> investment theme 2026"`）
+4. **硬性要求：必须附至少 1 篇来源文章链接**；无可引用文章的 idea 不合格
+5. 产出后写回历史：
+   ```bash
+   python3 .../discovery_log.py add --json '{"date":"...","type":"concept|ticker","name":"...","tickers":[...],"one_liner":"...","source_articles":[{"title":"...","url":"..."}]}'
+   ```
+6. 无合格 idea → `discovery = {"none_today": true, "scanned_note_cn": "扫描了哪些热点"}`（连续跳过可接受，不硬凑）
+
+### Step 7 — 拼装 + 渲染
+
+把 Step 1-6 结果拼成 input JSON v2（schema 见 `references/watchlist-schema.md` 末尾）。
+
+**URL 完整性校验（必跑，防止手敲/截断的死链）**：
+
+```bash
+python3 investment-plugin/skills/morning-update/scripts/check_urls.py /tmp/morning_input.json /tmp/news_candidates.json
+```
+
+FAIL 则回到 Step 5 从 candidates JSON 原样复制 URL（禁止从终端截断显示里手抄；WSJ 等 URL 末尾带唯一 hash，截断即 404）。通过后渲染：
 
 ```bash
 cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/scripts/render_report.py > /tmp/morning_report.md
 ```
 
-input JSON 结构（详见 `references/watchlist-schema.md` 末尾 "render input schema"）：
+渲染脚本负责：Top Call 选举（信号 > must_read > 默认）、Part 1-3 常设渲染、**Part 4 只在有 buy/trim 信号时渲染**、notes zone fallback。
 
-```json
-{
-  "date": "2026-05-19",
-  "fetched_at": "2026-05-19T08:00:00+08:00",
-  "portfolio_unavailable": false,
-  "funds": {...},            // 直接 forward from portfolio-fetch
-  "summary": {...},
-  "positions": [             // each: code, stock_name, qty, average_cost, nominal_price,
-    {                        //       market_val, unrealized_pl, pl_ratio_avg_cost, today_pl_val,
-      "ticker": "NVDA",      //       snapshot{...}
-      ...
-    }
-  ],
-  "watchlist": [             // each: ticker, market, name, notes, current_price
-    {...}
-  ],
-  "memos": {                 // ticker -> memo_loader output
-    "NVDA": {...}
-  },
-  "news": {                  // ticker -> [{title, url, opinion: confirm|challenge}]
-    "NVDA": [...]
-  },
-  "ratings": {               // ticker -> recent changes
-    "NVDA": "Buy → Strong Buy (Morgan Stanley, 2 days ago)"
-  },
-  "filings": {               // ticker -> recent 8-K
-    "NVDA": [{date, summary, url}]
-  },
-  "focus": null              // or "NVDA"
-}
-```
+### Step 8 — 落档 + 可选推送
 
-渲染脚本输出 markdown 含 Top Call + Part 1/2/3。详见 §"Output format" 节。
+1. 落档：`cp /tmp/morning_report.md Research/_morning/$(date +%Y-%m-%d)_morning.md`
+2. 推送（仅 `--push`）：`cat /tmp/morning_report.md | python3 .../push_telegram.py`
+   - 切分按 `## Part 1/2/3`；Part 4 内容自然并入 Part 3 那条消息（push_telegram 不改）
+3. `_run.log` append 一行：`{date, mode, duration_sec, news_scanned, news_kept, must_push_count, discovery, signals_count, exit_code}`
 
-### Step 6 — 落档 + 可选推送
-
-1. **落档本地**（无论 dry-run / push 都做）：
-   ```bash
-   mkdir -p Research/_morning
-   cp /tmp/morning_report.md Research/_morning/$(date +%Y-%m-%d)_morning.md
-   ```
-
-2. **推送 Telegram**（仅 `--push`）：
-   ```bash
-   cat /tmp/morning_report.md | python3 investment-plugin/skills/morning-update/scripts/push_telegram.py
-   ```
-   - Part 1 / Part 2 / Part 3 各一条消息，段间 sleep 0.5s
-   - Top Call 放在 Part 1 消息开头（粗体）
-   - 单段 >3900 字符 → 按 ticker 再切（≤4 条）
-   - 失败重试 1 次；仍失败 → stderr + `~/.claude/channels/morning-update/_push.log` + exit 1（**本地 md 已落档不受影响**）
-
-3. **写运行 log**：append 一行到 `Research/_morning/_run.log`，含 `{date, mode, duration_sec, positions_count, watchlist_count, exit_code}`
-
-## Output format（rendered markdown）
+## Output format
 
 ```markdown
 # {date} Morning Update
 
 ## 🎯 Top Call
-{一句话最重要事项，例如 "MU 进入 Trim Zone，建议减仓 25-50%"}
+{一句话：交易信号 > Citrini 新文 > "今日以阅读为主"}
 
----
+## Part 1 — 必读文章
+### 📌 Citrini Research
+**[标题](url)**
+- 3-5 句核心论点摘要
+- 与 watchlist 的关联：…
+### 值得读
+- **[标题](url)** · 来源
+  - 为什么值得读
 
-## Part 1 — 今日关注
+## Part 2 — 新闻与观点
+### 概念温度计
+{3-5 句综述}
+### 重点新闻（5-8 条）
+- **[标题](url)** · 来源 · AVGO · ✅ confirm
+  - 事实：…
+  - 观点：…
 
-### Portfolio ({n} 只)
-- **NVDA** · 持仓 · ⚡ 进入 Buy Zone
-  - 催化剂：2026-05-23 GTC Asia keynote — Blackwell Ultra 出货指引
-  - 重点支柱：If Blackwell capex ≥ $200B/年, then DC revenue +35% YoY through FY27
-  - 隔夜：[Bloomberg 标题](url) — confirm pillar 1（DC capex 加速）
-  - 评级：Buy → Strong Buy (Morgan Stanley, 2d)
-- **GOOGL** · 持仓 · ✅ 正常
-  - 催化剂：无 30 日内催化剂
-  - ...
+## Part 3 — 今日发现
+**{名称}**（概念 · 相关标的：…）
+- 是什么 / 为什么有潜力 / 与 watchlist 的差异 / 来源文章 / 下一步
 
-### Watchlist ({n} 只)
-- **AMZN** · 关注 · 距 Buy Zone -7%
-  - ...
+## Part 4 — 交易信号        ← 条件板块：无信号时整段不出现
+### 🟢 Buy Zone
+- **AVGO** $200.00 · Buy Zone $187.00–$215.00 · watchlist 建仓 · 建议限价 $201.00
+### 🔴 Trim / Sell
+- **MU** $560.00 · Trim Zone $525.00–$630.00 · 建议减仓 25-50% · 挂单参考 $525.00（zone 下沿）
 
----
-
-## Part 2 — 持仓盈亏与 Action
-
-NVDA   400 @ $192.16 → $222.43   ⚡  累计 +$12,118 (+15.8%)  今日 -$1,157  In Buy Zone → 建议加仓 1-2%
-GOOGL  480 @ $268.45 → $397.20   ✅  累计 +$61,800 (+47.9%)  今日 +$273    Normal → 持有
-MU      20 @ $391.00 → $679.00   ⚠️  累计 +$5,760  (+73.7%)  今日 -$913    In Trim Zone → 建议减仓 25-50%
-...
-
-**账户**：总资产 HK$4.13M / 流动性 37.6% / Top 5 集中度 61.5%（按总资产）
-**风险等级**：LEVEL3
-
----
-
-## Part 3 — Watchlist 入场扫描
-
-- **AMZN** $210 — Buy Zone $180-$195 — 距 -7% — 接近 Buy Zone，待观察
-- _其它静默：距离 Buy Zone > 5%，不展示_
-
----
-
-_生成于 {iso8601} · 耗时 {sec}s · 持仓 {n} / 关注 {m}_
+_生成于 {iso8601} · 扫描 N 条 → 保留 M 条_
 ```
 
-**纪律**：
-- P&L 字段**只用** `unrealized_pl` + `pl_ratio_avg_cost`（avg cost 口径）；**禁用** `pl_val` / `pl_ratio` / `cost_price` / `diluted_cost`
-- 持仓表退化为对齐纯文本（不发 markdown 表格 — Telegram 手机端不可读）
-- emoji 状态：⚡ Buy Zone / ⚠️ Trim Zone / 🚫 Above Trim / ✅ Normal / ❌ Error / 📌 No memo
+篇幅纪律：全文 2000-2500 中文字（10 分钟内读完）；篇幅配比 Part 1 三成 / Part 2 五成 / Part 3 两成。
 
 ## Error handling
 
 | 场景 | 行为 |
 |------|------|
-| OpenD 未启动（portfolio-fetch 失败） | `portfolio_unavailable=true`，Part 2 跳过，报告头标 "❌ 持仓数据不可用 — OpenD 未启动"，Part 1+3 仍跑 |
-| memo 解析锚点未匹配 | 该 ticker fallback "无 zone 数据" + `_run.log` 写 parser warning |
-| 当前价拿不到 | 用 portfolio-fetch 的 `prev_close_price`，标 "*盘前/休市数据" |
-| watchlist.json 不存在 | 视为空，Part 3 显示 "watchlist 为空，请编辑 `investment-plugin/references/watchlist.json`" |
-| watchlist.json JSON 损坏 | **abort + 推一条 error + exit 1**（不静默） |
-| yfinance / sec-edgar MCP 不可用 | 该字段标 "数据源不可用"，其余照常 |
-| Telegram 推送失败 | 本地 md 已落档；`_push.log` 写错误（不含 token）；exit 1 |
-| 周末 | cron `1-5` 已排除；手动跑无限制 |
-
-## Top Call 选举规则（优先级）
-
-1. 进入 Trim Zone（动作最迫切）
-2. 进入 Buy Zone（建仓机会）
-3. 30 天内重大催化剂（财报 / 重要会议 / FDA / 8-K material）
-4. 隔夜新闻冲击 thesis（challenge 类）
-5. 都没有 → "隔夜无重大变化，维持现有仓位"
+| OpenD 未启动 | `portfolio_unavailable=true`，trim 信号跳过，报告头标注，其余照常 |
+| 单个 RSS 源失败 | news_fetch 静默降级（stderr 记录），其余源照常 |
+| Citrini WebFetch 付费墙 | 摘要基于 RSS summary + 可见部分，注明"限免/付费墙" |
+| memo 解析失败 | 该 ticker fallback notes 提取；再无则无信号 |
+| watchlist.json 损坏 | abort + 推 error + exit 1 |
+| discovery 无合格 idea | `none_today`，不硬凑 |
+| Telegram 推送失败 | 本地 md 已落档；`_push.log` 记录；exit 1 |
 
 ## Discipline (HARD RULES)
 
-- **Read-only**：不调 moomoo `unlock_trade` / `place_order` / `modify_order` / `cancel_order`；本 skill 只 orchestrate + 读取
-- **不修改** stock-research / valuation / decision-rules / portfolio-fetch / 现有 telegram MCP
-- **不缓存** memo 解析结果（M1 现读现解析；M2 才考虑缓存）
-- **不缓存** portfolio（实时拉 portfolio-fetch）
-- Telegram token **永不入 git / 永不入 log**
-
-## M2 规划（不在本 skill 范围）
-
-- **`/research` 完成后 prompt 加 watchlist**：在 stock-research SKILL.md 末尾加 post-step，检查 ticker 不在 portfolio 也不在 watchlist 时，对话里问用户 "是否加入 watchlist？(y/n) 备注："，y 则 append 到 watchlist.json
-- `/watchlist` 命令查看 / 删除 ticker
-- memo 解析缓存（`cache/{ticker}.json`，mtime 失效）
-- Telegram 富文本（matplotlib 渲染 P/L 柱状图）
-- 财报 Quick Take 嵌入 morning note（参考 `doc/pre-market-notes-design.md` §6.3）
+- **Read-only**：不调 moomoo 下单类接口
+- **must_push 桶零丢弃**：Citrini 等源的新文章必须全部出现在 Part 1
+- **Discovery 必须附文章链接**，且 30 天内不重复推荐（先 `discovery_log.py list`）
+- 观点必须落到"对 thesis / 决策的含义"，禁止复述 headline
+- Telegram token 永不入 git / 永不入 log
+- 不缓存 RSS / memo / portfolio（每次现拉）
 
 ## Related files
 
 - 入口：`investment-plugin/commands/morning.md`
-- Scripts：
+- Scripts（skill-local）：
+  - `scripts/news_fetch.py` — RSS 聚合四桶输出
+  - `scripts/discovery_log.py` — Discovery 历史 list/add
   - `scripts/memo_loader.py` — 解析 memo §1 / §20 / §21d
-  - `scripts/render_report.py` — JSON → markdown
+  - `scripts/render_report.py` — input JSON v2 → markdown
   - `scripts/push_telegram.py` — 独立 bot HTTPS POST
   - `scripts/grab_chat_id.py` — 一次性配 chat_id
 - 数据：
+  - `references/feeds.json` — RSS 源清单（must_push 标记；用户可自行加 Substack）
+  - `investment-plugin/references/concepts.json` — 概念关键词
   - `investment-plugin/references/watchlist.json`（本地维护，不入 git）
+  - `Research/_morning/discovery_log.json` — Discovery 历史
   - `~/.claude/channels/morning-update/.env`（token / chat_id）
-- Cron：`~/.claude/scheduled-tasks/morning-update/SKILL.md`
-- 设计稿：`doc/pre-market-notes-design.md`（v0.2，本 skill 对其做了 4 处冲突收紧，详见对应 PR 的 description）
+- 设计稿：`doc/pre-market-notes-design.md`、`doc/narrative-screener-design.md`（Discovery 轻量版思路来源）
