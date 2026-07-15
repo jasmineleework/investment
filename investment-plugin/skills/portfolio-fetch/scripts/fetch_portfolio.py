@@ -27,6 +27,19 @@ from moomoo import (
     RET_OK,
 )
 
+# moomoo SDK 在 import 时给 logger "FTConsoleLog" 挂了一个输出到 stdout 的
+# StreamHandler，其连接日志会混进本脚本的纯 JSON stdout，导致下游 json.load 失败
+# （表现为「OpenD 未启动」误报）。把所有指向 stdout 的日志 handler 改道 stderr，
+# 保证 --json 模式下 stdout 只剩 JSON。
+import logging as _logging
+
+for _lg in [_logging.getLogger()] + [
+    _logging.getLogger(_n) for _n in list(_logging.root.manager.loggerDict)
+]:
+    for _h in getattr(_lg, "handlers", []):
+        if isinstance(_h, _logging.StreamHandler) and getattr(_h, "stream", None) is sys.stdout:
+            _h.stream = sys.stderr
+
 OPEND_HOST = os.getenv("FUTU_OPEND_HOST", "127.0.0.1")
 OPEND_PORT = int(os.getenv("FUTU_OPEND_PORT", "11111"))
 DEFAULT_FIRM = SecurityFirm.FUTUSG
