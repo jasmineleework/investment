@@ -28,3 +28,8 @@ investment-plugin/references/watchlist.json
 
 # Personal task tracking and research run logs (local-only, not for shared repo)
 tasks/
+
+# Skill 运行时产物（落在 skill 目录内，含运行统计/推送日志/排重记录，local-only）
+investment-plugin/skills/**/_run.log
+investment-plugin/skills/**/_push.log
+investment-plugin/skills/**/discovery_log.json
