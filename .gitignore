@@ -8,9 +8,13 @@
 # History context (local reference only)
 history_context/
 
-# Claude
+# Design docs — local drafts, not for shared repo
+doc/
+
+# Claude — local instructions, not for shared repo
 .claude/
 .mcp.json
+CLAUDE.md
 
 # Research output (local only, not tracked)
 Research/
