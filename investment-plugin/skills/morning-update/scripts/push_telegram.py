@@ -79,10 +79,10 @@ def log_event(level: str, event: str, **fields) -> None:
 
 
 def split_into_sections(md: str) -> list[tuple[str, str]]:
-    """Return [(label, text), ...] split at top-level Part / Top Call markers.
+    """Return [(label, text), ...] split at top-level Part markers.
 
     Result order roughly:
-      ("HEAD", "<header + Top Call>")   — always present
+      ("HEAD", "<title header>")        — merged into Part 1
       ("Part 1", "<Part 1 markdown>")
       ("Part 2", "<Part 2 markdown>")
       ("Part 3", "<Part 3 markdown>")
