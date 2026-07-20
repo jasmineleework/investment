@@ -16,9 +16,10 @@ Input contract (see morning-update SKILL.md §Step 7):
     "worth_reading": [{title, url, source, why_cn}],
     "news_curated":  [{title, url, source, related, fact_cn, opinion_cn,
                        stance: "confirm"|"challenge"|"neutral"}],
-    "discovery": {type, name, tickers, what_cn, why_cn, difference_cn,
+    "discovery": {type, name, tickers, what_cn, why_cn, edge_cn, difference_cn,
                   next_step_cn, source_articles: [{title, url}]}
                  | {"none_today": true, "scanned_note_cn": "..."},
+                 // edge_cn = 为什么现在还有机会（早 / 冷门 / 被低估，尚未拥挤）
     "positions": [...],          // from portfolio-fetch (optional)
     "watchlist": [...],          // from watchlist.json + current_price
     "memos": { TICKER: memo_loader_output },
@@ -214,6 +215,8 @@ def render_part3(data: dict) -> str:
         L.append(f"- 是什么：{d['what_cn']}")
     if d.get("why_cn"):
         L.append(f"- 为什么有潜力：{d['why_cn']}")
+    if d.get("edge_cn"):
+        L.append(f"- 为什么现在还有机会：{d['edge_cn']}")
     if d.get("difference_cn"):
         L.append(f"- 与现有 watchlist 的差异：{d['difference_cn']}")
     arts = d.get("source_articles") or []

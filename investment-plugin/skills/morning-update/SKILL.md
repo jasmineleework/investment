@@ -15,7 +15,7 @@ allowed-tools: Bash Read Write Edit WebFetch WebSearch
 
 1. 今天有哪些**必读文章**？（Citrini Research 等 must-push 源有新文一定推）
 2. watchlist 标的和背后概念（TPU 供应链、AI infra …）今天有什么**重点新闻 + 我们的观点**？
-3. 市场上有没有一个**我还没发现**的概念/标的值得研究？（每天 1 个，必须附文章）
+3. 有没有一个**早期 / 冷门 / 被低估**、还没拥挤的新兴概念或标的值得研究？（每天 1 个，必须附文章；避开已涨透的共识热门）
 4. 有没有**交易信号**？（watchlist 进 Buy Zone / 持仓进 Trim Zone —— 有才出现）
 
 ## When to invoke
@@ -95,17 +95,30 @@ python3 investment-plugin/skills/morning-update/scripts/news_fetch.py \
 
 去重纪律：同一事件多源报道只保留一条（选最权威源）。
 
-### Step 6 — Discovery（每天 1 个新 idea）
+### Step 6 — Discovery（每天 1 个「早期 / 冷门 / 被低估」的 idea）
+
+**目标：挖一个尚未拥挤的机会——新兴概念、冷门行业、或被错杀 / 低估的标的。**
+明确避开已经涨透、人尽皆知的共识热门（已在各大主题篮子里、近月大涨估值 stretched、卖方全面覆盖的名字，如 CRDO / ANET 这类）。**宁可 `none_today`，也不推一个「已经没机会」的热门充数。**
 
 1. `python3 investment-plugin/skills/morning-update/scripts/discovery_log.py list --days 30` → 近 30 天已推荐
 2. 排除集 = holdings ∪ watchlist ∪ 已推荐
-3. 从 `unmatched_hot` 标题簇出发，必要时 1-2 次 WebSearch 验证（如 `"<keyword> investment theme 2026"`）
-4. **硬性要求：必须附至少 1 篇来源文章链接**；无可引用文章的 idea 不合格
-5. 产出后写回历史：
+3. **拥挤度否决（命中任一即淘汰）**：
+   - 已是共识 / 主流交易：卖方全面覆盖、财经头条高频、已在热门主题篮子里
+   - 近 3–6 个月大涨且估值已 stretched（「没机会了」的典型信号）
+   - `unmatched_hot` 里最热的标题簇 —— 这些是**要避开**的拥挤信号，不是选题来源
+4. **选题方向（优先级）**：
+   1. **二 / 三阶衍生**：已知大趋势里，不选最显眼的龙头，选下游 2 层、被忽视的使能者 / 供应商 / 卖铲人
+   2. **早期新兴概念 / 行业**：采用曲线早段、主流覆盖少、还没被贴标签的主题
+   3. **逆向 / 被低估**：失宠、错杀、因短期错配而 mispriced 的标的
+5. 用 WebSearch 做**发现式**检索（2–3 次），示例查询：
+   `emerging <sector> theme early 2026`、`under the radar <X> stocks`、`overlooked beneficiaries of <trend>`、`contrarian undervalued <theme> 2026`
+6. **硬性要求**：至少 1 篇来源文章链接；无可引用文章的 idea 不合格
+7. `why_cn` / `edge_cn` 必须讲清**为什么现在还有机会**——早在哪、冷门在哪、为什么还没被 price in（这是本板块的核心价值，不能省）
+8. 产出后写回历史：
    ```bash
-   python3 .../discovery_log.py add --json '{"date":"...","type":"concept|ticker","name":"...","tickers":[...],"one_liner":"...","source_articles":[{"title":"...","url":"..."}]}'
+   python3 .../discovery_log.py add --json '{"date":"...","type":"concept|ticker","name":"...","tickers":[...],"one_liner":"...","edge_cn":"为什么现在还有机会 / 未被定价","source_articles":[{"title":"...","url":"..."}]}'
    ```
-6. 无合格 idea → `discovery = {"none_today": true, "scanned_note_cn": "扫描了哪些热点"}`（连续跳过可接受，不硬凑）
+9. 无合格 idea → `discovery = {"none_today": true, "scanned_note_cn": "扫描了哪些热点、为何都太拥挤"}`（连续跳过可接受，不硬凑热门）
 
 ### Step 7 — 拼装 + 渲染
 
@@ -154,7 +167,7 @@ cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/sc
 
 ## Part 3 — 今日发现
 **{名称}**（概念 · 相关标的：…）
-- 是什么 / 为什么有潜力 / 与 watchlist 的差异 / 来源文章 / 下一步
+- 是什么 / 为什么有潜力 / 为什么现在还有机会（早·冷门·低估）/ 与 watchlist 的差异 / 来源文章 / 下一步
 
 ## Part 4 — 交易信号        ← 条件板块：无信号时整段不出现
 ### 🟢 Buy Zone
