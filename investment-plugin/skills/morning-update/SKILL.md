@@ -92,7 +92,6 @@ python3 investment-plugin/skills/morning-update/scripts/news_fetch.py \
 1. **must_read**：每篇 must_push 文章，用 WebFetch 抓正文写 3-5 句核心论点摘要 + 与 watchlist 的关联（付费墙截断时基于可见部分并注明）。**must_push 桶里的文章一篇都不能丢。**
 2. **worth_reading**：从 opinion 源（Seeking Alpha 等）+ matched 桶挑 1-3 篇值得读的深度内容，每篇写"为什么值得读"。
 3. **news_curated**：5-8 条重点新闻，优先级 challenge thesis > 概念级事件 > confirm；每条写 1 句事实 + 2-3 句观点（so-what），标 stance（confirm/challenge/neutral）。
-4. **concept_pulse**：3-5 句概念温度计综述（TPU 供应链 / AI 电力等今天整体动向）。
 
 去重纪律：同一事件多源报道只保留一条（选最权威源）。
 
@@ -124,7 +123,7 @@ FAIL 则回到 Step 5 从 candidates JSON 原样复制 URL（禁止从终端截�
 cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/scripts/render_report.py > /tmp/morning_report.md
 ```
 
-渲染脚本负责：Top Call 选举（信号 > must_read > 默认）、Part 1-3 常设渲染、**Part 4 只在有 buy/trim 信号时渲染**、notes zone fallback。
+渲染脚本负责：Part 1-3 常设渲染、**Part 4 只在有 buy/trim 信号时渲染**、notes zone fallback。
 
 ### Step 8 — 落档 + 可选推送
 
@@ -138,9 +137,6 @@ cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/sc
 ```markdown
 # {date} Morning Update
 
-## 🎯 Top Call
-{一句话：交易信号 > Citrini 新文 > "今日以阅读为主"}
-
 ## Part 1 — 必读文章
 ### 📌 Citrini Research
 **[标题](url)**
@@ -151,8 +147,6 @@ cat /tmp/morning_input.json | python3 investment-plugin/skills/morning-update/sc
   - 为什么值得读
 
 ## Part 2 — 新闻与观点
-### 概念温度计
-{3-5 句综述}
 ### 重点新闻（5-8 条）
 - **[标题](url)** · 来源 · AVGO · ✅ confirm
   - 事实：…

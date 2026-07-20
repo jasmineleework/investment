@@ -3,9 +3,8 @@
 render_report.py — pure rendering: stdin JSON (schema v2) → stdout Markdown.
 
 Briefing layout (10-minute read):
-  🎯 Top Call
   Part 1 — 必读文章     (must_read: Citrini 等 must_push 源 + worth_reading 精选)
-  Part 2 — 新闻与观点   (concept_pulse 段落 + news_curated 5-8 条)
+  Part 2 — 新闻与观点   (news_curated 5-8 条)
   Part 3 — 今日发现     (discovery, 必须带 source_articles)
   Part 4 — 交易信号     (CONDITIONAL — 只在有 buy/trim 信号时渲染)
 
@@ -15,7 +14,6 @@ Input contract (see morning-update SKILL.md §Step 7):
     "fetched_at": "2026-07-14T08:00:00+08:00",
     "must_read":     [{title, url, source, summary_cn, watchlist_link_cn}],
     "worth_reading": [{title, url, source, why_cn}],
-    "concept_pulse": "概念温度计段落 …",
     "news_curated":  [{title, url, source, related, fact_cn, opinion_cn,
                        stance: "confirm"|"challenge"|"neutral"}],
     "discovery": {type, name, tickers, what_cn, why_cn, difference_cn,
@@ -40,7 +38,6 @@ from datetime import date, datetime
 
 E_BUY = "🟢"
 E_TRIM = "🔴"
-E_TOP = "🎯"
 E_ERROR = "❌"
 
 # stance emoji 放条目行首（Telegram 手机端一眼可扫）；neutral 用中性方块
@@ -144,32 +141,6 @@ def build_signals(data: dict):
 
 
 # ---------------------------------------------------------------------------
-# Top Call
-# ---------------------------------------------------------------------------
-
-def elect_top_call(data: dict, buy_signals: list, trim_signals: list) -> str:
-    """Signals first (trim > buy); otherwise the LLM-provided top_call;
-    otherwise Citrini; otherwise default."""
-    if trim_signals:
-        s = trim_signals[0]
-        zone = (s["memo"] or {}).get("trim_zone")
-        if s["status"] == "above_trim":
-            return f"**{s['ticker']} 已超越 Trim Zone** — 考虑全部卖出（详见 Part 4）"
-        return f"**{s['ticker']} 进入 Trim Zone ({_zone_str(zone)})** — 建议减仓 25-50%（详见 Part 4）"
-    if buy_signals:
-        s = buy_signals[0]
-        zone = (s["memo"] or {}).get("buy_zone")
-        verb = "加仓" if s["holding"] else "建仓"
-        return f"**{s['ticker']} 进入 Buy Zone ({_zone_str(zone)})** — {verb}机会（详见 Part 4）"
-    if data.get("top_call"):
-        return data["top_call"]
-    if data.get("must_read"):
-        m = data["must_read"][0]
-        return f"**{m.get('source', '')} 新文章：{m.get('title', '')}** — 见 Part 1"
-    return "隔夜无交易信号 — 今日以阅读为主，见 Part 1/2"
-
-
-# ---------------------------------------------------------------------------
 # Parts
 # ---------------------------------------------------------------------------
 
@@ -204,12 +175,6 @@ def render_part1(data: dict) -> str:
 
 def render_part2(data: dict) -> str:
     L = ["## Part 2 — 📰 新闻与观点", ""]
-    pulse = data.get("concept_pulse")
-    if pulse:
-        L.append("### 🌡 概念温度计")
-        L.append("")
-        L.append(pulse)
-        L.append("")
     news = data.get("news_curated") or []
     if news:
         L.append(f"### 重点新闻（{len(news)} 条）")
@@ -227,7 +192,7 @@ def render_part2(data: dict) -> str:
             if n.get("opinion_cn"):
                 L.append(f"  - 观点：{n['opinion_cn']}")
             L.append("")
-    elif not pulse:
+    else:
         L.append("_今日无 thesis-relevant 新闻_")
         L.append("")
     return "\n".join(L)
@@ -308,7 +273,6 @@ def render_part4(buy_signals: list, trim_signals: list) -> str:
 
 def render(data: dict) -> str:
     buy_signals, trim_signals = build_signals(data)
-    top_call = elect_top_call(data, buy_signals, trim_signals)
 
     date_s = data.get("date") or date.today().isoformat()
     fetched = data.get("fetched_at") or datetime.now().isoformat(timespec="seconds")
@@ -317,11 +281,6 @@ def render(data: dict) -> str:
     if data.get("portfolio_unavailable"):
         L.append(f"{E_ERROR} _持仓数据不可用（OpenD 未启动）— 交易信号仅覆盖 watchlist_")
         L.append("")
-    L.append(f"## {E_TOP} Top Call")
-    L.append(top_call)
-    L.append("")
-    L.append("---")
-    L.append("")
     L.append(render_part1(data))
     L.append("---")
     L.append("")
